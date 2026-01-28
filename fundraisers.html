@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>קמפיין פורים | ישיבת תפארת התורה</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Secular+One&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Reusing styles from index.html for consistency */
+        :root {
+            --primary: #0f172a;
+            --accent: #ca8a04;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --success: #16a34a;
+            --border-color: #e2e8f0;
+        }
+        body { font-family: 'Heebo', sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text-main); padding-bottom: 90px; }
+        header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 1rem 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+        header h2 { margin: 0; font-family: 'Secular One', sans-serif; font-size: 1.2rem; text-align: center; flex-grow: 1; }
+        .container { max-width: 900px; margin: 20px auto; padding: 0 15px; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border-top: 4px solid var(--accent); position: relative; }
+        h1, h2 { color: var(--primary); margin-top: 0; font-family: 'Secular One', sans-serif; }
+        
+        /* Fundraisers List Styles */
+        .fundraiser-list { list-style: none; padding: 0; }
+        .fundraiser-item { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 10px; transition: background-color 0.2s; display: flex; justify-content: space-between; align-items: stretch; }
+        .fundraiser-item:hover { background-color: #f1f5f9; }
+        .fundraiser-item-header { display: flex; justify-content: space-between; align-items: center; }
+        .fundraiser-item .name { font-weight: bold; font-size: 1.1rem; }
+        .fundraiser-item .group { font-size: 0.9rem; color: #64748b; }
+        .fundraiser-item .amount { font-size: 1.2rem; font-weight: bold; color: var(--success); }
+        .fundraiser-item .goal { font-size: 0.8rem; color: #94a3b8; }
+
+        /* Personal Progress Bar */
+        .personal-progress-container {
+            background-color: var(--border-color);
+            border-radius: 10px;
+            height: 12px;
+            width: 100%;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .personal-progress-bar {
+            background: var(--success); height: 100%; width: 0%; border-radius: 10px;
+            transition: width 1s ease-in-out; text-align: center; color: white; font-size: 0.7rem; line-height: 12px; font-weight: bold;
+        }
+        /* Donation history sub-list */
+        .donations-sublist { list-style: none; padding: 15px 15px 0 0; margin-top: 15px; border-top: 1px dashed var(--border-color); display: none; animation: fadeIn 0.3s; }
+        .donations-sublist.visible { display: block; }
+        .donations-sublist li { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.95rem; }
+        .donations-sublist li:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+        .donations-sublist .donor-name { color: var(--text-main); }
+        .donations-sublist .donation-amount { font-weight: bold; }
+        .donations-sublist-title { font-weight: bold; margin-bottom: 10px; }
+
+        /* Form & Button Styles (reused from admin.html) */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: #f8fafc; }
+        .btn { background-color: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; width: 100%; transition: all 0.3s; display: inline-flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn:hover { background-color: #334155; }
+
+        /* Bottom Navigation */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: var(--card-bg); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05); z-index: 900; left: 0; }
+        .nav-item { text-align: center; color: #94a3b8; cursor: pointer; flex: 1; font-size: 0.8rem; text-decoration: none; }
+        .nav-item.active { color: var(--accent); font-weight: bold; }
+        .nav-item i { font-size: 1.3rem; display: block; margin-bottom: 4px; }
+    </style>
+    <style>
+        /* Modal & Donate Button Styles */
+        .header-buttons { display: flex; align-items: center; gap: 15px; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
+        .header-donate-btn {
+            background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; /* Request 2: Bigger button */
+            font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.9rem;
+            font-size: 1rem; /* Request 2: Bigger font */
+            position: relative; overflow: hidden; 
+        }
+        .header-donate-btn:hover { background: #eab308; }
+        /* Request 2: Shimmer animation for RTL */
+        .header-donate-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -100%; /* RTL */
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(240deg, rgba(255,255,255,0) 20%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 80%); /* RTL */
+            animation: shimmer-rtl 3s infinite linear;
+        }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.3s; }
+        .modal-content { background: var(--card-bg); padding: 30px; border-radius: 16px; width: 90%; max-width: 400px; position: relative; }
+        .modal-close { position: absolute; top: 10px; left: 15px; background: none; border: none; font-size: 2rem; cursor: pointer; color: #94a3b8; }
+        .amount-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+        .amount-btn { padding: 15px; border: 1px solid var(--border-color); background: var(--bg); color: var(--text-main); border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s; font-size: 1.1rem; }
+        .amount-btn.active, .amount-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        #custom-amount { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: #f8fafc; margin-bottom: 20px; }
+        .donate-via-btn { background: none; border: 1px solid var(--accent); color: var(--accent); padding: 6px 10px; font-size: 0.85rem; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .kudos-btn { background: none; border: 1px solid #fbbf24; color: #fbbf24; padding: 5px 8px; font-size: 0.8rem; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        .kudos-btn:hover { background: #fef3c7; }
+        .kudos-btn.disabled { background: #d9f99d; border-color: #a3e635; color: #4d7c0f; cursor: not-allowed; }
+        .kudos-btn .fa-hands-clapping { margin-left: 4px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes shimmer-rtl { /* Request 2 */
+            0% { right: -100%; }
+            50% { right: 100%; }
+            100% { right: 100%; }
+        }
+        /* Modal Extras */
+        .currency-toggle { display: flex; justify-content: center; margin-bottom: 15px; gap: 10px; }
+        .currency-btn { background: #f1f5f9; border: 1px solid var(--border-color); padding: 5px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; }
+        .currency-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .modal-fundraiser-progress { margin-top: 10px; background: #f1f5f9; padding: 10px; border-radius: 8px; display: none; }
+        .form-input { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-family: inherit; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-buttons">
+            <button class="header-donate-btn" onclick="openDonationModal()">תרום עכשיו</button>
+            <button id="lang-toggle-btn" style="background: transparent; border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; margin-right: 10px;" onclick="toggleLanguage()">EN</button>
+        </div>
+        <h2>ישיבת תפארת התורה קמפיין פורים תשפ"ו</h2>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h1><i class="fas fa-users"></i> רשימת המתרימים</h1>
+                <button class="btn" onclick="openJoinModal()" style="width: auto; padding: 10px 20px; font-size: 0.9rem;">הצטרף למאמץ</button>
+            </div>
+            <div class="form-group">
+                <label for="search-input">חיפוש מתרים</label>
+                <input type="text" id="search-input" placeholder="הקלד שם לחיפוש...">
+            </div>
+            <ul class="fundraiser-list" id="fundraiser-list">
+                <!-- Fundraisers will be loaded here -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Join Modal -->
+    <div id="join-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeJoinModal()">&times;</button>
+            <h1><i class="fas fa-user-plus"></i> רוצה להצטרף?</h1>
+            <p>קחו על עצמכם יעד אישי והצטרפו למאמץ הגיוס. כל אחד יכול!</p>
+            <div class="form-group">
+                <label for="new-fundraiser-name">שם מלא</label>
+                <input type="text" id="new-fundraiser-name" placeholder="ישראל ישראלי">
+            </div>
+            <div class="form-group">
+                <label for="new-fundraiser-group">קבוצה</label>
+                <select id="new-fundraiser-group">
+                    <option value="שיעור א'">שיעור א'</option>
+                    <option value="שיעור ב'">שיעור ב'</option>
+                    <option value="שיעור ג'">שיעור ג'</option>
+                    <option value="בוגרים">בוגרים</option>
+                    <option value="אחר">אחר</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="new-fundraiser-goal">יעד אישי (בשקלים)</label>
+                <input type="number" id="new-fundraiser-goal" value="1000">
+            </div>
+            <button class="btn" onclick="registerFundraiser()"><i class="fas fa-bullseye"></i> קבל על עצמך יעד</button>
+        </div>
+    </div>
+
+    <!-- Donation Modal -->
+    <div id="donation-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeDonationModal()">&times;</button>
+            <h3>תרומה לקמפיין</h3>
+            <p id="modal-fundraiser-context" style="display:none; color: #64748b; font-weight: bold;"></p>
+            
+            <div class="currency-toggle">
+                <button class="currency-btn active" onclick="setCurrency('ILS')">₪ שקלים</button>
+                <button class="currency-btn" onclick="setCurrency('USD')">$ דולר</button>
+            </div>
+
+            <div class="amount-buttons">
+                <button class="amount-btn" onclick="selectAmount(50, this)">₪50</button>
+                <button class="amount-btn" onclick="selectAmount(100, this)">₪100</button>
+                <button class="amount-btn" onclick="selectAmount(200, this)">₪200</button>
+                <button class="amount-btn" onclick="selectAmount(500, this)">₪500</button>
+            </div>
+            <input type="number" id="custom-amount" placeholder="סכום אחר" oninput="selectCustomAmount(this)">
+            
+            <input type="text" id="donor-name" class="form-input" placeholder="שם התורם (לתצוגה באתר)">
+            <input type="text" id="receipt-name" class="form-input" placeholder="שם לקבלה (ע''ש מי הקבלה)">
+            <input type="email" id="donor-email" class="form-input" placeholder="אימייל לקבלת הקבלה">
+            
+            <select id="fundraiser-select" class="form-input" onchange="onFundraiserSelectChange()">
+                <option value="">בחר מתרים (אופציונלי)</option>
+            </select>
+            <div id="modal-fundraiser-progress-container" class="modal-fundraiser-progress"></div>
+
+            <textarea id="dedication" class="form-input" rows="2" placeholder="הקדשה (אופציונלי)"></textarea>
+
+            <button class="btn" onclick="processDonation()">תרום עכשיו</button>
+        </div>
+    </div>
+
+    <!-- Nedarim Plus IFrame Modal -->
+    <div id="nedarim-plus-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 95%; max-width: 500px; height: 90%;">
+            <button class="modal-close" onclick="closeNedarimPlusModal()">&times;</button>
+            <iframe id="nedarim-plus-iframe" 
+                    style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+                    src="about:blank"
+                    title="Nedarim Plus Payment">
+            </iframe>
+        </div>
+    </div>
+
+
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>דשבורד</span></a>
+        <a href="fundraisers.html" class="nav-item active"><i class="fas fa-users"></i><span>מתרימים</span></a>
+        <a href="donors.html" class="nav-item"><i class="fas fa-list"></i><span>תורמים</span></a>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qkiutqhdmmpmrireouhr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFraXV0cWhkbW1wbXJpcmVvdWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MDA4ODYsImV4cCI6MjA4NTE3Njg4Nn0.qiPyC9kz0I7g66pk7_-akWmuFAdMDWKmRX0dPviirqE';
+        
+        // !!! עדכן את מספר המוסד שלך כאן !!!
+        const NEDARIM_PLUS_MOSAD_ID = '7006311'; // החלף במספר המוסד שקיבלת מנדרים פלוס
+
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allFundraisers = []; // To store the full list for searching
+        let selectedFundraiser = null;
+        let currentCurrency = 'ILS';
+        let currentDonationId = null;
+
+        async function loadFundraisers() {
+            const { data, error } = await supabaseClient
+                .from('fundraisers')
+                .select('*') // Request 4 Fix: Using '*' is safer if 'kudos_count' column doesn't exist.
+                .order('total_raised', { ascending: false })
+                .order('personal_goal', { ascending: false });
+
+            if (error) {
+                console.error("Error loading fundraisers:", error); // This will show the error in the console.
+                return;
+            }
+            allFundraisers = data;
+            renderFundraisers(allFundraisers);
+        }
+
+        function renderFundraisers(fundraisersToRender) {
+            const list = document.getElementById('fundraiser-list');
+            list.innerHTML = '';
+
+            if (fundraisersToRender.length === 0) {
+                list.innerHTML = `<p style="text-align: center; color: #64748b;">${t('no_fundraisers')}</p>`;
+                return;
+            }
+
+            fundraisersToRender.forEach(f => {
+                const li = document.createElement('li');
+                li.className = 'fundraiser-item';
+                li.id = `fundraiser-${f.id}`; // Request 3: Add ID for direct linking
+
+                const percentage = Math.min(((f.total_raised || 0) / (f.personal_goal || 1)) * 100, 100);
+
+                li.innerHTML = `
+                    <div style="flex-grow: 1; cursor: pointer;" onclick="toggleDonations(${f.id}, this.parentElement)">
+                        <div class="fundraiser-item-header">
+                            <div>
+                                <div class="name">${f.name}</div>
+                                <div class="group">${f.group}</div>
+                            </div>
+                            <div style="text-align: left;">
+                                <div class="amount">₪${(f.total_raised || 0).toLocaleString()}</div>
+                                <div class="goal">${t('of_goal')} ₪${(f.personal_goal || 0).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="personal-progress-container">
+                            <div class="personal-progress-bar" style="width: ${percentage}%;">${Math.floor(percentage)}%</div>
+                        </div>
+                        <div class="donations-sublist-container"></div>
+                    </div>
+                    <div style="text-align: center; margin-right: 15px; border-left: 1px solid var(--border-color); padding-left: 15px; display: flex; flex-direction: column; justify-content: center; gap: 10px;">
+                        <button class="donate-via-btn" onclick="event.stopPropagation(); openDonationModal(${f.id}, '${f.name}')">${t('donate_via')}</button>
+                        <button class="kudos-btn" id="kudos-btn-${f.id}" onclick="event.stopPropagation(); giveKudos(${f.id}, this)">
+                            <i class="fa-solid fa-hands-clapping"></i> ${t('kudos')} (${f.kudos_count || 0})
+                        </button>
+                    </div>
+                `;
+                list.appendChild(li);
+
+                if (localStorage.getItem('kudos_given_' + f.id)) {
+                    const kudosBtn = li.querySelector('#kudos-btn-' + f.id);
+                    kudosBtn.classList.add('disabled');
+                    kudosBtn.disabled = true;
+                }
+            });
+        }
+
+        async function toggleDonations(fundraiserId, listItemElement) {
+            const container = listItemElement.querySelector('.donations-sublist-container');
+            const existingSublist = container.querySelector('.donations-sublist');
+
+            if (existingSublist) {
+                existingSublist.remove(); // Hide if already visible
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('donations')
+                .select('donor_name, amount')
+                .eq('fundraiser_id', fundraiserId)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Error fetching donations:", error);
+                container.innerHTML = `<p>${t('error_loading')}</p>`;
+                return;
+            }
+
+            const sublist = document.createElement('ul');
+            sublist.className = 'donations-sublist visible';
+            
+            if (data.length === 0) {
+                sublist.innerHTML = `<p style="font-size: 0.9rem; color: #64748b;">${t('no_donations')}</p>`;
+            } else {
+                sublist.innerHTML = `<h4 class="donations-sublist-title">${t('history_title')}</h4>`;
+                data.forEach(donation => {
+                    const donorName = donation.donor_name || t('anonymous');
+                    sublist.innerHTML += `
+                        <li>
+                            <span class="donor-name">${donorName}</span>
+                            <span class="donation-amount">₪${donation.amount.toLocaleString()}</span>
+                        </li>
+                    `;
+                });
+            }
+            container.appendChild(sublist);
+        }
+
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = allFundraisers.filter(f => f.name.toLowerCase().includes(searchTerm));
+            renderFundraisers(filtered);
+        });
+
+        async function registerFundraiser() {
+            const name = document.getElementById('new-fundraiser-name').value;
+            const group = document.getElementById('new-fundraiser-group').value;
+            const personal_goal = parseFloat(document.getElementById('new-fundraiser-goal').value);
+
+            if (!name) return alert('יש להזין שם מלא.');
+            if (!personal_goal || personal_goal <= 0) return alert('יש להזין יעד אישי חיובי.');
+
+            const { error } = await supabaseClient
+                .from('fundraisers')
+                .insert([{ name, group, personal_goal, total_raised: 0 }]);
+
+            if (error) {
+                alert('שגיאה ברישום: ' + error.message);
+                return;
+            }
+
+            alert('נרשמת בהצלחה! תודה רבה ובהצלחה בגיוס.');
+            closeJoinModal();
+            document.getElementById('new-fundraiser-name').value = '';
+            document.getElementById('new-fundraiser-goal').value = '1000';
+            loadFundraisers(); // Refresh the list
+        }
+        
+        // Request 5: Kudos logic
+        async function giveKudos(fundraiserId, buttonElement) {
+            if (localStorage.getItem('kudos_given_' + fundraiserId)) {
+                alert('כבר שלחת שכוייח למתרים זה ממכשיר זה.');
+                return;
+            }
+
+            // Disable button immediately to prevent double clicks
+            buttonElement.disabled = true;
+
+            // Call Supabase RPC function to increment kudos
+            const { error } = await supabaseClient.rpc('increment_kudos', { fundraiser_id_to_update: fundraiserId });
+
+            if (error) {
+                alert('אירעה שגיאה, נסה שוב מאוחר יותר.');
+                console.error('Error incrementing kudos:', error);
+                buttonElement.disabled = false; // Re-enable if it failed
+                return;
+            }
+
+            // On success, update UI and local storage
+            localStorage.setItem('kudos_given_' + fundraiserId, 'true');
+            buttonElement.classList.add('disabled');
+            loadFundraisers(); // Refresh the list to show the new count
+        }
+
+        async function applyTheme() {
+            // 1. Try LocalStorage
+            const keys = ['--primary', '--accent', '--bg', '--card-bg', '--text-main'];
+            keys.forEach(key => {
+                const val = localStorage.getItem('color' + key);
+                if (val) document.documentElement.style.setProperty(key, val);
+            });
+
+            // 2. Try Supabase (Global Config)
+            const { data } = await supabaseClient.from('site_config').select('*');
+            if (data) {
+                data.forEach(row => {
+                    document.documentElement.style.setProperty(row.key, row.value);
+                    // Update local storage to match global
+                    localStorage.setItem('color' + row.key, row.value);
+                });
+            }
+        }
+
+        function openJoinModal() {
+            document.getElementById('join-modal').style.display = 'flex';
+        }
+        function closeJoinModal() {
+            document.getElementById('join-modal').style.display = 'none';
+        }
+
+        function openDonationModal(fundraiserId = null, fundraiserName = null) {
+            const modal = document.getElementById('donation-modal');
+            const select = document.getElementById('fundraiser-select');
+            
+            // Populate select if empty (using already loaded allFundraisers)
+            if (select.options.length <= 1 && allFundraisers.length > 0) {
+                allFundraisers.forEach(f => {
+                    const option = document.createElement('option');
+                    option.value = f.id;
+                    option.textContent = f.name;
+                    select.appendChild(option);
+                });
+            }
+
+            if (fundraiserId && fundraiserName) {
+                select.value = fundraiserId;
+                onFundraiserSelectChange();
+            } else {
+                select.value = "";
+                document.getElementById('modal-fundraiser-progress-container').style.display = 'none';
+            }
+            modal.style.display = 'flex';
+        }
+
+        function onFundraiserSelectChange() {
+            const select = document.getElementById('fundraiser-select');
+            const container = document.getElementById('modal-fundraiser-progress-container');
+            const fundraiserId = parseInt(select.value);
+            
+            if (!fundraiserId) {
+                container.style.display = 'none';
+                return;
+            }
+
+            const fundraiser = allFundraisers.find(f => f.id === fundraiserId);
+            if (fundraiser) {
+                const percentage = Math.min(((fundraiser.total_raised || 0) / (fundraiser.personal_goal || 1)) * 100, 100);
+                container.innerHTML = `
+                    <div style="font-size: 0.85rem; margin-bottom: 5px; display:flex; justify-content:space-between;">
+                        <span>היעד של ${fundraiser.name}</span>
+                        <span>₪${fundraiser.total_raised.toLocaleString()} / ₪${fundraiser.personal_goal.toLocaleString()}</span>
+                    </div>
+                    <div class="personal-progress-container" style="margin-top:0;">
+                        <div class="personal-progress-bar" style="width: ${percentage}%;">${Math.floor(percentage)}%</div>
+                    </div>
+                `;
+                container.style.display = 'block';
+            }
+        }
+
+        function setCurrency(currency) {
+            currentCurrency = currency;
+            document.querySelectorAll('.currency-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const buttons = document.querySelectorAll('#donation-modal .amount-btn');
+            const amounts = currency === 'ILS' ? [50, 100, 200, 500] : [18, 36, 100, 180];
+            const symbol = currency === 'ILS' ? '₪' : '$';
+
+            buttons.forEach((btn, index) => {
+                btn.textContent = symbol + amounts[index];
+                btn.onclick = () => selectAmount(amounts[index], btn);
+            });
+            
+            const customInput = document.getElementById('custom-amount');
+            customInput.placeholder = currency === 'ILS' ? 'סכום אחר (₪)' : 'סכום אחר ($)';
+        }
+
+        function closeDonationModal() {
+            document.getElementById('donation-modal').style.display = 'none';
+        }
+
+        function selectAmount(amount, btnElement) {
+            document.querySelectorAll('#donation-modal .amount-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            document.getElementById('custom-amount').value = '';
+        }
+
+        function selectCustomAmount(inputElement) {
+            document.querySelectorAll('#donation-modal .amount-btn').forEach(btn => btn.classList.remove('active'));
+        }
+
+        async function processDonation() { 
+            // Gather data
+            const amount = parseFloat(document.getElementById('custom-amount').value || document.querySelector('.amount-btn.active')?.textContent.replace(/[^\d.]/g,''));
+            const donorName = document.getElementById('donor-name').value || t('anonymous');
+            const receiptName = document.getElementById('receipt-name').value || donorName;
+            const email = document.getElementById('donor-email').value;
+            const fundraiserId = document.getElementById('fundraiser-select').value || null;
+            const dedication = document.getElementById('dedication').value;
+
+            if(!amount || amount <= 0) return alert('נא לבחור סכום לתרומה');
+            if (!NEDARIM_PLUS_MOSAD_ID) {
+                return alert('שגיאת הגדרה: יש לעדכן את מספר המוסד בקוד.');
+            }
+
+            // 1. Save data to Supabase
+            const { data: newDonation, error } = await supabaseClient
+                .from('donations')
+                .insert([{
+                    amount: amount,
+                    currency: currentCurrency,
+                    donor_name: donorName,
+                    receipt_name: receiptName,
+                    email: email,
+                    fundraiser_id: fundraiserId,
+                    dedication: dedication,
+                    payment_status: 'completed'
+                }])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Supabase insert error:', error);
+                return alert('אירעה שגיאה ברישום התרומה. אנא נסה שוב.');
+            }
+            
+            currentDonationId = newDonation.id;
+
+            // 2. Prepare and open Nedarim Plus IFrame, passing all relevant data in the URL
+            const params = new URLSearchParams();
+            params.set('mosad', NEDARIM_PLUS_MOSAD_ID);
+            params.set('Amount', amount);
+            params.set('ClientName', donorName);
+            params.set('ClientEMail', email);
+            params.set('sCurrency', currentCurrency === 'ILS' ? '1' : '2');
+            if (receiptName) params.set('ReceiptName', receiptName);
+            if (dedication) params.set('Dedication', dedication);
+
+            // Add the SuccessURL to redirect to our thank you page after payment
+            const successUrl = new URL('thankyou.html', window.location.href).href + '?donation_id=' + newDonation.id;
+            params.set('SuccessURL', successUrl);
+
+            const iframeUrl = `https://www.matara.pro/nedarimplus/online/?${params.toString()}`;
+            
+            document.getElementById('nedarim-plus-iframe').src = iframeUrl;
+            document.getElementById('nedarim-plus-modal').style.display = 'flex';
+
+            closeDonationModal();
+        }
+        function closeNedarimPlusModal() { document.getElementById('nedarim-plus-modal').style.display = 'none'; document.getElementById('nedarim-plus-iframe').src = 'about:blank'; }
+
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
+
+        // --- Realtime Updates ---
+        function setupRealtime() {
+            const channel = supabaseClient.channel('public:updates');
+
+            channel
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, payload => {
+                    const isNewCompleted = payload.eventType === 'INSERT' && payload.new.payment_status === 'completed';
+                    const isUpdatedToCompleted = payload.eventType === 'UPDATE' && payload.new.payment_status === 'completed' && (payload.old ? payload.old.payment_status !== 'completed' : true);
+
+                    if (isNewCompleted || isUpdatedToCompleted) {
+                        if (currentDonationId && payload.new.id === currentDonationId) {
+                            window.location.href = 'thankyou.html?donation_id=' + payload.new.id;
+                            return;
+                        }
+                        loadFundraisers(); // רענון הרשימה לכולם
+                    }
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fundraisers' }, payload => {
+                    loadFundraisers();
+                })
+                .subscribe();
+        }
+
+        // --- Translation Logic ---
+        const translations = {
+            he: {
+                campaign_title: 'ישיבת תפארת התורה קמפיין פורים תשפ"ו',
+                donate_now: 'תרום עכשיו',
+                fundraisers_list_title: 'רשימת המתרימים',
+                join_effort: 'הצטרף למאמץ',
+                search_fundraiser: 'חיפוש מתרים',
+                search_fundraiser_placeholder: 'הקלד שם לחיפוש...',
+                no_fundraisers_found: 'לא נמצאו מתרימים.',
+                join_modal_title: 'רוצה להצטרף?',
+                join_modal_desc: 'קחו על עצמכם יעד אישי והצטרפו למאמץ הגיוס. כל אחד יכול!',
+                full_name: 'שם מלא',
+                group_class: 'קבוצה',
+                personal_goal: 'יעד אישי (בשקלים)',
+                take_on_goal: 'קבל על עצמך יעד',
+                nav_dashboard: 'דשבורד',
+                nav_fundraisers: 'מתרימים',
+                nav_donors: 'תורמים',
+                donation_modal_title: 'תרומה לקמפיין',
+                currency_ils: '₪ שקלים',
+                currency_usd: '$ דולר',
+                other_amount: 'סכום אחר',
+                donor_name_placeholder: 'שם התורם (לתצוגה באתר)',
+                receipt_name_placeholder: "שם לקבלה (ע''ש מי הקבלה)",
+                email_placeholder: 'אימייל לקבלת הקבלה',
+                fundraiser_select: 'בחר מתרים (אופציונלי)',
+                dedication_placeholder: 'הקדשה (אופציונלי)',
+                anonymous: 'תורם אנונימי',
+                donated_for: 'עבור',
+                not_associated: 'לא משויך',
+                kudos: 'שכוייח!',
+                loading: 'טוען...',
+                error_loading: 'שגיאה בטעינת הנתונים.',
+                no_donations: 'עדיין לא נרשמו תרומות.',
+                no_fundraisers: 'לא נמצאו מתרימים.',
+                donate_via: 'תרום דרכו',
+                of_goal: 'מתוך יעד של',
+                history_title: 'היסטוריית תרומות',
+                toast_new_donation: 'תרומה חדשה!',
+                toast_donated: 'תרם/ה',
+                currency_ils_short: '₪',
+                currency_usd_short: '$'
+            },
+            en: {
+                campaign_title: 'Tiferet HaTorah Yeshiva Purim Campaign 5786',
+                donate_now: 'Donate Now',
+                fundraisers_list_title: 'List of Fundraisers',
+                join_effort: 'Join the Effort',
+                search_fundraiser: 'Search Fundraiser',
+                search_fundraiser_placeholder: 'Type a name to search...',
+                no_fundraisers_found: 'No fundraisers found.',
+                join_modal_title: 'Want to join?',
+                join_modal_desc: 'Take on a personal goal and join the fundraising effort. Anyone can do it!',
+                full_name: 'Full Name',
+                group_class: 'Group / Class',
+                personal_goal: 'Personal Goal (in ILS)',
+                take_on_goal: 'Set a Goal',
+                nav_dashboard: 'Dashboard',
+                nav_fundraisers: 'Fundraisers',
+                nav_donors: 'Donors',
+                donation_modal_title: 'Donation to the Campaign',
+                currency_ils: '₪ ILS',
+                currency_usd: '$ USD',
+                other_amount: 'Other Amount',
+                donor_name_placeholder: 'Donor Name (for display on site)',
+                receipt_name_placeholder: 'Name for Receipt',
+                email_placeholder: 'Email for Receipt',
+                fundraiser_select: 'Select a fundraiser (optional)',
+                dedication_placeholder: 'Dedication (optional)',
+                anonymous: 'Anonymous Donor',
+                donated_for: 'For',
+                not_associated: 'General',
+                kudos: 'Kudos!',
+                loading: 'Loading...',
+                error_loading: 'Error loading data.',
+                no_donations: 'No donations yet.',
+                no_fundraisers: 'No fundraisers found.',
+                donate_via: 'Donate via',
+                of_goal: 'of goal',
+                history_title: 'Donation History',
+                toast_new_donation: 'New Donation!',
+                toast_donated: 'donated',
+                currency_ils_short: '₪',
+                currency_usd_short: '$'
+            }
+        };
+
+        let currentLang = localStorage.getItem('campaign_lang') || 'he';
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('campaign_lang', lang);
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+
+            const langDict = translations[lang] || translations.he;
+
+            // Static elements
+            document.querySelector('header h2').textContent = langDict.campaign_title;
+            document.querySelector('.header-donate-btn').textContent = langDict.donate_now;
+            document.querySelector('.card h1').innerHTML = `<i class="fas fa-users"></i> ${langDict.fundraisers_list_title}`;
+            document.querySelector('.card button[onclick="openJoinModal()"]').textContent = langDict.join_effort;
+            document.querySelector('label[for="search-input"]').textContent = langDict.search_fundraiser;
+            document.getElementById('search-input').placeholder = langDict.search_fundraiser_placeholder;
+            
+            // Join Modal
+            document.querySelector('#join-modal h1').innerHTML = `<i class="fas fa-user-plus"></i> ${langDict.join_modal_title}`;
+            document.querySelector('#join-modal p').textContent = langDict.join_modal_desc;
+            document.querySelector('label[for="new-fundraiser-name"]').textContent = langDict.full_name;
+            document.querySelector('label[for="new-fundraiser-group"]').textContent = langDict.group_class;
+            document.querySelector('label[for="new-fundraiser-goal"]').textContent = langDict.personal_goal;
+            document.querySelector('#join-modal .btn').innerHTML = `<i class="fas fa-bullseye"></i> ${langDict.take_on_goal}`;
+
+            // Nav
+            document.querySelector('.bottom-nav a[href="index.html"] span').textContent = langDict.nav_dashboard;
+            document.querySelector('.bottom-nav .nav-item.active span').textContent = langDict.nav_fundraisers;
+            document.querySelector('.bottom-nav a[href="donors.html"] span').textContent = langDict.nav_donors;
+
+            // Reload dynamic content
+            if (allFundraisers.length > 0) {
+                renderFundraisers(allFundraisers);
+            } else {
+                loadFundraisers();
+            }
+
+            const langToggleBtn = document.getElementById('lang-toggle-btn');
+            if(langToggleBtn) {
+                langToggleBtn.innerText = lang === 'he' ? 'EN' : 'עב';
+            }
+        }
+
+        function toggleLanguage() {
+            const newLang = currentLang === 'he' ? 'en' : 'he';
+            setLanguage(newLang);
+        }
+
+        window.onload = function() {
+            setLanguage(currentLang);
+            loadFundraisers();
+            applyTheme();
+            setupRealtime();
+
+            // Request 1 & 2: Advanced Keyboard Shortcuts
+            const pressedKeys = new Set();
+            document.addEventListener('keydown', (e) => {
+                pressedKeys.add(e.code);
+
+                // Request 1: Alt + A + Q (Admin)
+                if (e.altKey && pressedKeys.has('KeyA') && pressedKeys.has('KeyQ')) {
+                    e.preventDefault();
+                    window.location.href = 'admin.html';
+                }
+
+                // Request 2: Alt + A + R + I (Thank You Page)
+                if (e.altKey && pressedKeys.has('KeyA') && pressedKeys.has('KeyR') && pressedKeys.has('KeyI')) {
+                    e.preventDefault();
+                    window.location.href = 'thankyou.html';
+                }
+            });
+            document.addEventListener('keyup', (e) => { pressedKeys.delete(e.code); });
+        };
+    </script>
+</body>
+</html>

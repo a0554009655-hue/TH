@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תודה רבה!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Secular+One&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: rgba(0,0,0,0.7);
+            font-family: 'Heebo', sans-serif;
+            overflow: hidden;
+        }
+        .popup {
+            background: #fff;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 10px solid;
+            animation: neon-border 2s linear infinite;
+        }
+        @keyframes neon-border {
+            0% { border-color: #ff00de; }
+            25% { border-color: #00f7ff; }
+            50% { border-color: #00ff41; }
+            75% { border-color: #ffc400; }
+            100% { border-color: #ff00de; }
+        }
+        h1 {
+            font-family: 'Secular One', sans-serif;
+            font-size: 2.5rem;
+            color: #0f172a;
+            margin-top: 0;
+        }
+        p {
+            font-size: 1.2rem;
+            color: #334155;
+        }
+        .close-btn {
+            background-color: #16a34a;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        .close-btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="popup">
+        <h1>תודה ענקית!</h1>
+        <p>תרומתך התקבלה בהצלחה. בזכותך אנחנו צעד נוסף קרוב יותר למטרה!</p>
+        <button class="close-btn" onclick="goBack()">תזכו למצוות</button>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qkiutqhdmmpmrireouhr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFraXV0cWhkbW1wbXJpcmVvdWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MDA4ODYsImV4cCI6MjA4NTE3Njg4Nn0.qiPyC9kz0I7g66pk7_-akWmuFAdMDWKmRX0dPviirqE';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        function randomInRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        // Infinite confetti logic
+        function startInfiniteConfetti() {
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            const interval = setInterval(function() {
+                var particleCount = 50;
+                // since particles fall down, start a bit higher than random
+                confetti(Object.assign({}, defaults, {
+                    particleCount,
+                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+                }));
+                confetti(Object.assign({}, defaults, {
+                    particleCount,
+                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+                }));
+            }, 250);
+        }
+
+        // Mark donation as completed to trigger realtime toast for others
+        async function markDonationAsCompleted() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const donationId = urlParams.get('donation_id');
+
+            if (donationId) {
+                try {
+                    await supabaseClient
+                        .from('donations')
+                        .update({ payment_status: 'completed' })
+                        .eq('id', donationId);
+                } catch (error) {
+                    console.error("Error updating donation status:", error);
+                }
+            }
+        }
+
+        window.onload = () => {
+            // אם הדף נטען בתוך iframe (כמו המודל של נדרים פלוס), רענן את הדף הראשי לכתובת הזו
+            if (window.self !== window.top) {
+                window.top.location.href = window.location.href;
+                return;
+            }
+
+            startInfiniteConfetti();
+            // After the page loads, we tell the database the payment was successful.
+            // This will trigger the live toast notification for all other users.
+            markDonationAsCompleted();
+        };
+    </script>
+</body>
+</html>

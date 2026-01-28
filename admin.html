@@ -1,0 +1,501 @@
+<!-- c:\Users\1\Desktop\קמפיין\admin.html -->
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>קמפיין פורים | ישיבת תפארת התורה</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Secular+One&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #ca8a04;
+            --bg: #f8fafc;
+            --text-main: #334155;
+            /* Add card-bg here for consistency, though it's not directly used in admin.html's root */
+            --card-bg: #ffffff; 
+            --border-color: #e2e8f0;
+        }
+        body { font-family: 'Heebo', sans-serif; margin: 0; background: var(--bg); color: var(--text-main); display: flex; height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); }
+        .sidebar h2 { font-family: 'Secular One', sans-serif; text-align: center; margin-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; font-size: 1.4rem; }
+        .sidebar button { background: transparent; border: none; color: #cbd5e1; text-align: right; padding: 15px; font-size: 1.1rem; cursor: pointer; border-radius: 8px; transition: 0.3s; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; width: 100%; }
+        .sidebar button:hover { background: rgba(255,255,255,0.1); color: white; }
+        .sidebar button.active { background: var(--accent); color: var(--primary); font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        
+        /* Content */
+        .content { flex: 1; padding: 40px; overflow-y: auto; }
+        .section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); max-width: 900px; margin-bottom: 30px; border-top: 4px solid var(--accent); }
+        h1 { margin-top: 0; color: var(--primary); font-family: 'Secular One', sans-serif; font-size: 1.8rem; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: #f8fafc; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); background: white; }
+        
+        .btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: 0.3s; font-weight: bold; }
+        .btn:hover { background: #1e293b; transform: translateY(-2px); }
+        
+        .color-picker-group { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 1px solid var(--border-color); }
+        input[type="color"] { width: 50px; height: 40px; border: none; cursor: pointer; background: none; }
+
+        /* New style for fundraiser list in admin */
+        .admin-fundraiser-list { list-style: none; padding: 0; margin-top: 20px; }
+        .admin-fundraiser-item { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-fundraiser-item .name { font-weight: bold; font-size: 1.1rem; }
+        .admin-fundraiser-item .group { font-size: 0.9rem; color: #64748b; }
+        .admin-fundraiser-item .amount { font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
+        .admin-fundraiser-item .actions button { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+        .admin-fundraiser-item .actions button:hover { background: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2><i class="fas fa-cog"></i> פאנל ניהול</h2>
+        <button onclick="showTab('fundraisers', this)" class="active"><i class="fas fa-users"></i> ניהול מתרימים</button>
+        <button onclick="showTab('analytics', this)"><i class="fas fa-chart-line"></i> נתונים וסטטיסטיקה</button>
+        <button onclick="showTab('theme', this)"><i class="fas fa-palette"></i> עיצוב האתר</button>
+        <button onclick="showTab('export', this)"><i class="fas fa-file-excel"></i> ייצוא לאקסל</button>
+        <button onclick="showTab('danger', this)"><i class="fas fa-exclamation-triangle"></i> אזור סכנה</button>
+        <div style="flex:1"></div>
+        <button onclick="window.location.href='index.html'" style="color: #ef4444;"><i class="fas fa-sign-out-alt"></i> חזרה לאתר</button>
+    </div>
+
+    <div class="content">
+        <!-- Fundraisers Tab -->
+        <div id="tab-fundraisers" class="section active">
+            <div class="card">
+                <h1>הוספת מתרים חדש</h1>
+                <div class="form-group">
+                    <label>שם מלא</label>
+                    <input type="text" id="fundraiser-name" placeholder="לדוגמה: ישראל ישראלי">
+                </div>
+                <div class="form-group">
+                    <label>שיעור</label>
+                    <select id="fundraiser-group">
+                        <option value="שיעור א'">שיעור א'</option>
+                        <option value="שיעור ב'">שיעור ב'</option>
+                        <option value="שיעור ג'">שיעור ג'</option>
+                        <option value="בוגרים">בוגרים</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>יעד אישי (בשקלים)</label>
+                    <input type="number" id="fundraiser-goal" value="1000">
+                </div>
+                <button class="btn" onclick="addFundraiser()">הוסף מתרים למערכת</button>
+            </div>
+
+            <div class="card">
+                <h1>רישום תרומה ידנית (מזומן/העברה)</h1>
+                <div class="form-group">
+                    <label>בחר מתרים לזקיפת התרומה</label>
+                    <select id="donation-fundraiser-select"></select>
+                </div>
+                <div class="form-group">
+                    <label>סכום התרומה</label>
+                    <input type="number" id="donation-amount" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>שם התורם (לא חובה)</label>
+                    <input type="text" id="donor-name" placeholder="פלוני אלמוני">
+                </div>
+                <button class="btn" onclick="addDonation()">רשום תרומה</button>
+            </div>
+
+            <div class="card">
+                <h1>רשימת מתרימים קיימים</h1>
+                <ul id="admin-fundraiser-list" class="admin-fundraiser-list">
+                    <!-- Fundraisers will be loaded here -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="tab-analytics" class="section">
+            <div class="card">
+                <h1>ניתוח כניסות לאתר</h1>
+                <p style="font-size: 1.2rem;">סה"כ כניסות שנרשמו: <strong id="total-visits" style="color: var(--accent);">0</strong></p>
+                <div style="height: 400px;">
+                    <canvas id="visits-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Tab -->
+        <div id="tab-theme" class="section">
+            <div class="card">
+                <h1>התאמת צבעי האתר</h1>
+                <p>שינוי הצבעים כאן ישפיע על האתר הראשי.</p>
+                <div id="color-pickers"></div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="btn" onclick="saveColors()">שמור שינויים</button>
+                    <button class="btn" onclick="resetColors()" style="background: #64748b;">אפס לברירת מחדל</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Tab -->
+        <div id="tab-export" class="section">
+            <div class="card">
+                <h1>ייצוא נתונים</h1>
+                <p>הורדת כל נתוני המתרימים והתרומות לקובץ Excel לצורך גיבוי או עיבוד.</p>
+                <button class="btn" onclick="exportToExcel()">הורד קובץ Excel</button>
+            </div>
+        </div>
+
+        <!-- Danger Zone Tab -->
+        <div id="tab-danger" class="section">
+            <div class="card" style="border-top-color: #ef4444;">
+                <h1><i class="fas fa-exclamation-triangle"></i> אזור סכנה</h1>
+                <p>פעולות בחלק זה הן בלתי הפיכות וימחקו נתונים לצמיתות.</p>
+                <div class="form-group" style="margin-top: 30px;">
+                    <label>איפוס כל נתוני הקמפיין</label>
+                    <p style="font-size: 0.9rem; color: #64748b;">פעולה זו תמחק את <strong>כל</strong> המתרימים, <strong>כל</strong> התרומות, ו<strong>כל</strong> היסטוריית הכניסות לאתר. השתמש בזהירות, למשל, לפני תחילת קמפיין חדש.</p>
+                    <button class="btn" onclick="resetCampaignData()" style="background: #dc2626;">אפס את כל נתוני הקמפיין</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts moved to the end of body for better performance and to avoid race conditions -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        const SUPABASE_URL = 'https://qkiutqhdmmpmrireouhr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFraXV0cWhkbW1wbXJpcmVvdWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MDA4ODYsImV4cCI6MjA4NTE3Njg4Nn0.qiPyC9kz0I7g66pk7_-akWmuFAdMDWKmRX0dPviirqE';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let visitsChart = null;
+
+        // Navigation
+        function showTab(tabName, buttonElement) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            document.querySelectorAll('.sidebar button').forEach(el => el.classList.remove('active'));
+            buttonElement.classList.add('active'); // Use the passed buttonElement
+            
+            if (tabName === 'analytics') loadAnalytics();
+            if (tabName === 'fundraisers') {
+                loadFundraisersList(); // For the dropdown
+                renderFundraisersTable(); // For the list display
+            }
+            if (tabName === 'theme') initColorPickers(); // Re-initialize pickers when tab is shown
+        }
+        
+        // Fundraisers Logic
+        async function addFundraiser() {
+            const name = document.getElementById('fundraiser-name').value;
+            const group = document.getElementById('fundraiser-group').value;
+            const personal_goal = parseFloat(document.getElementById('fundraiser-goal').value) || 1000;
+            if (!name) return alert('יש להזין שם מתרים.');
+
+            const { error } = await supabaseClient.from('fundraisers').insert([{ name, group, personal_goal, total_raised: 0 }]); // Initialize total_raised
+            if (error) return alert('שגיאה: ' + error.message);
+            
+            alert('המתרים נוסף בהצלחה!');
+            document.getElementById('fundraiser-name').value = '';
+            document.getElementById('fundraiser-goal').value = '1000'; // Reset goal input
+            loadFundraisersList(); // Refresh dropdown
+            renderFundraisersTable(); // Refresh the displayed list
+        }
+
+        async function loadFundraisersList() {
+            const { data, error } = await supabaseClient.from('fundraisers').select('*').order('name');
+            if (error) {
+                console.error("Error loading fundraisers for select:", error);
+                return;
+            }
+            const select = document.getElementById('donation-fundraiser-select');
+            select.innerHTML = '<option value="">בחר מתרים...</option>'; // Add a default option
+            data.forEach(f => {
+                const option = document.createElement('option');
+                option.value = f.id;
+                option.textContent = `${f.name} (${f.group})`;
+                select.appendChild(option);
+            });
+        }
+
+        async function renderFundraisersTable() {
+            const { data, error } = await supabaseClient.from('fundraisers').select('*').order('name');
+            if (error) {
+                console.error("Error loading fundraisers for table:", error);
+                return;
+            }
+
+            const listContainer = document.getElementById('admin-fundraiser-list');
+            listContainer.innerHTML = ''; // Clear existing list
+
+            if (data.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: #64748b;">אין מתרימים רשומים עדיין.</p>';
+                return;
+            }
+
+            data.forEach(f => {
+                const li = document.createElement('li');
+                li.className = 'admin-fundraiser-item';
+                li.innerHTML = `
+                    <div>
+                        <div class="name">${f.name}</div>
+                        <div class="group">${f.group}</div>
+                        <div class="amount">גויס: ₪${(f.total_raised || 0).toLocaleString()} / יעד: ₪${(f.personal_goal || 0).toLocaleString()}</div>
+                    </div>
+                    <div class="actions">
+                        <button onclick="deleteFundraiser(${f.id})">מחק</button>
+                    </div>
+                `;
+                listContainer.appendChild(li);
+            });
+        }
+
+        async function deleteFundraiser(fundraiserId) {
+            if (!confirm('האם אתה בטוח שברצונך למחוק מתרים זה? פעולה זו בלתי הפיכה ותמחק גם את כל התרומות המשויכות אליו.')) {
+                return;
+            }
+
+            // First, delete associated donations
+            const { error: deleteDonationsError } = await supabaseClient.from('donations').delete().eq('fundraiser_id', fundraiserId);
+            if (deleteDonationsError) {
+                alert('שגיאה במחיקת תרומות משויכות: ' + deleteDonationsError.message);
+                return;
+            }
+
+            // Then, delete the fundraiser
+            const { error: deleteFundraiserError } = await supabaseClient.from('fundraisers').delete().eq('id', fundraiserId);
+            if (deleteFundraiserError) {
+                alert('שגיאה במחיקת המתרים: ' + deleteFundraiserError.message);
+                return;
+            }
+
+            alert('המתרים ותרומותיו נמחקו בהצלחה!');
+            loadFundraisersList();
+            renderFundraisersTable();
+        }
+
+        async function addDonation() {
+            // Request 7: Allow null fundraiser_id
+            const fundraiser_id = document.getElementById('donation-fundraiser-select').value || null;
+            const amount = parseFloat(document.getElementById('donation-amount').value);
+            const donor_name = document.getElementById('donor-name').value;
+            
+            if (!amount || amount <= 0) return alert('נא להזין סכום תקין.');
+
+            // Insert the donation with 'completed' status.
+            // The database trigger 'on_donation_completed' will automatically update the fundraiser's total.
+            const { error } = await supabaseClient.from('donations').insert([{ 
+                fundraiser_id: fundraiser_id, 
+                amount: amount, 
+                donor_name: donor_name,
+                payment_status: 'completed' // Mark as completed since it's a manual entry
+            }]);
+            if (error) return alert('שגיאה ברישום התרומה: ' + error.message);
+
+            alert('התרומה נרשמה בהצלחה!');
+            document.getElementById('donation-amount').value = '';
+            document.getElementById('donor-name').value = '';
+            renderFundraisersTable(); // Refresh the displayed list to show updated total
+        }
+
+        async function resetCampaignData() {
+            if (!confirm('האם אתה בטוח? פעולה זו תמחק את כל התרומות, המתרימים והכניסות לאתר.')) {
+                return;
+            }
+            if (!confirm('אישור אחרון! אין דרך חזרה. האם למחוק הכל?')) {
+                return;
+            }
+
+            try {
+                const btn = event.target;
+                btn.disabled = true;
+                btn.textContent = 'מוחק...';
+
+                // Delete donations
+                const { error: dError } = await supabaseClient.from('donations').delete().neq('id', 0);
+                if (dError) throw dError;
+
+                // Delete fundraisers
+                const { error: fError } = await supabaseClient.from('fundraisers').delete().neq('id', 0);
+                if (fError) throw fError;
+
+                // Delete visits
+                const { error: vError } = await supabaseClient.from('site_visits').delete().neq('id', 0);
+                if (vError) throw vError;
+
+                alert('כל נתוני הקמפיין אופסו בהצלחה!');
+                location.reload();
+            } catch (error) {
+                alert('אירעה שגיאה באיפוס הנתונים: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = 'אפס את כל נתוני הקמפיין';
+            }
+        }
+
+        // Analytics Logic
+        async function loadAnalytics() {
+            const { data, error } = await supabaseClient.from('site_visits').select('visited_at');
+            if (error) return;
+
+            document.getElementById('total-visits').textContent = data.length.toLocaleString();
+            const visitsByHour = Array(24).fill(0);
+            data.forEach(visit => {
+                const hour = new Date(visit.visited_at).getHours();
+                visitsByHour[hour]++;
+            });
+
+            const ctx = document.getElementById('visits-chart').getContext('2d');
+            if (visitsChart) visitsChart.destroy();
+            visitsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => `${i}:00`), // Fixed labels
+                    datasets: [{
+                        label: 'כניסות לפי שעה',
+                        data: visitsByHour,
+                        backgroundColor: '#ca8a04',
+                        borderRadius: 4
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } } 
+                }
+            });
+        }
+
+        // Theme Logic
+        const colorsToManage = { 
+            '--primary': 'צבע ראשי', 
+            '--accent': 'צבע הדגשה', 
+            '--bg': 'רקע כללי', 
+            '--card-bg': 'רקע כרטיסים', 
+            '--text-main': 'צבע טקסט' 
+        };
+        
+        async function initColorPickers() {
+            const container = document.getElementById('color-pickers');
+            container.innerHTML = ''; // Clear existing pickers
+
+            // Fetch current colors from Supabase first
+            const { data: configData, error: configError } = await supabaseClient.from('site_config').select('*');
+            const currentConfig = {};
+            if (configData) {
+                configData.forEach(item => currentConfig[item.key] = item.value);
+            } else if (configError) {
+                console.warn("Could not fetch site_config from Supabase:", configError.message);
+            }
+
+            Object.entries(colorsToManage).forEach(([key, name]) => {
+                // Prioritize Supabase, then localStorage, then computed style, then hardcoded default
+                const savedColor = currentConfig[key] || 
+                                   localStorage.getItem('color' + key) || 
+                                   getComputedStyle(document.documentElement).getPropertyValue(key).trim() || 
+                                   '#000000'; // Fallback to black if nothing found
+
+                container.innerHTML += `
+                    <div class="color-picker-group">
+                        <label>${name}</label>
+                        <input type="color" data-var="${key}" value="${savedColor}">
+                    </div>`;
+            });
+
+            // Add event listeners for live preview
+            container.querySelectorAll('input[type="color"]').forEach(picker => {
+                picker.addEventListener('input', (e) => {
+                    document.documentElement.style.setProperty(e.target.dataset.var, e.target.value);
+                });
+            });
+        }
+
+        async function saveColors() {
+            const updates = [];
+            document.querySelectorAll('#color-pickers input[type="color"]').forEach(picker => {
+                const key = picker.dataset.var;
+                const value = picker.value;
+                localStorage.setItem('color' + key, value); // Save to local storage for immediate effect on index.html
+                
+                // Try to save to Supabase if table exists
+                updates.push({ key, value });
+            });
+            
+            // Upsert to Supabase site_config
+            const { error } = await supabaseClient.from('site_config').upsert(updates, { onConflict: 'key' }); // Use onConflict for upsert
+            if (error) {
+                console.error("שגיאה בשמירת הצבעים ל-Supabase:", error.message);
+                alert("שגיאה בשמירת הצבעים לשרת. הצבעים נשמרו מקומית בלבד.");
+            }
+            
+            alert('הצבעים נשמרו! (רענן את האתר הראשי כדי לראות שינויים)');
+        }
+
+async function resetColors() {
+    if (!confirm('האם לאפס את הצבעים לברירת המחדל? פעולה זו תמחק את ההגדרות לצמיתות גם מהמחשב וגם מהשרת.')) {
+        return;
+    }
+
+    // מחיקה מה-localStorage
+    Object.keys(colorsToManage).forEach(key => localStorage.removeItem('color' + key));
+
+    // מחיקה מ-Supabase
+    const { error } = await supabaseClient
+        .from('site_config')
+        .delete()
+        .in('key', Object.keys(colorsToManage));
+
+    if (error) {
+        console.error("שגיאה במחיקת הגדרות הצבעים מהשרת:", error.message);
+        alert("שגיאה באיפוס הצבעים בשרת. הצבעים אופסו במחשב זה בלבד. אנא רענן את הדף ידנית.");
+    } else {
+        alert('הצבעים אופסו בהצלחה! הדף יתרענן כעת.');
+        location.reload(); // רענון רק בהצלחה
+    }
+}
+
+// לוגיקת ייצוא לאקסל (הייתה כפולה, השארתי את הגרסה הנכונה)
+async function exportToExcel() {
+    // שליפת נתונים
+    const { data: fundraisers, error: fError } = await supabaseClient.from('fundraisers').select('*');
+    const { data: donations, error: dError } = await supabaseClient.from('donations').select('*, fundraisers(name)');
+
+    // בדיקת שגיאות לאחר השליפה
+    if (fError || dError) {
+        console.error("Error fetching data:", fError || dError);
+        return alert('שגיאה בטעינת נתונים לייצוא.');
+    }
+
+    const wb = XLSX.utils.book_new();
+    
+    // גיליון מתרימים
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fundraisers), "מתרימים");
+    
+    // עיבוד נתוני תרומות
+    const donationRows = donations.map(d => ({
+        'שם המתרים': d.fundraisers?.name || 'לא ידוע',
+        'שם התורם': d.donor_name,
+        'סכום': d.amount,
+        'תאריך': new Date(d.created_at).toLocaleString('he-IL')
+    }));
+    
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(donationRows), "תרומות");
+    
+    // הורדת הקובץ
+    XLSX.writeFile(wb, "Campaign_Data.xlsx");
+}
+        // Init
+        window.onload = function() {
+            loadFundraisersList();
+            renderFundraisersTable();
+            // initColorPickers(); // This will be called when the theme tab is activated
+        };
+    </script>
+</body>
+</html>
