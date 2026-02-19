@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Secular+One&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <style>
         :root {
             --primary: #0f172a;
@@ -427,7 +428,7 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentAmount = 0; // This will be updated from DB
-        const goalAmount = 150000;
+        let goalAmount = 150000; // Default, will be updated from DB
         let currentCurrency = 'ILS';
         let allFundraisersForModal = [];
         let currentDonationId = null; // משתנה לשמירת מזהה התרומה הנוכחית
@@ -441,13 +442,27 @@
             }
             currentAmount = data || 0;
 
-            const percentage = Math.min((currentAmount / goalAmount) * 100, 100);
+            // Request 3: Fetch dynamic goal
+            const { data: goalData } = await supabaseClient.from('site_config').select('value').eq('key', 'campaign_goal').single();
+            if (goalData && goalData.value) {
+                goalAmount = parseInt(goalData.value);
+            }
+            document.getElementById('goal-amount').innerText = `${t('goal')} ₪${goalAmount.toLocaleString()}`;
+
+            // Request 1: Allow percentage to exceed 100%
+            const percentage = (currentAmount / goalAmount) * 100;
             const progressBar = document.getElementById('progress-bar');
             const raisedText = document.getElementById('raised-amount');
 
-            progressBar.style.width = percentage + '%';
+            // Cap width at 100% for visual CSS, but text shows real percentage
+            progressBar.style.width = Math.min(percentage, 100) + '%';
             progressBar.innerText = Math.floor(percentage) + '%';
             raisedText.innerText = '₪' + currentAmount.toLocaleString() + ' ' + t('raised');
+
+            // Request 4: Confetti if goal reached
+            if (percentage >= 100) {
+                triggerConfetti();
+            }
         }
 
         // Request 1 & 2: Advanced Keyboard Shortcuts
@@ -457,7 +472,7 @@
             pressedKeys.add(e.code);
 
             // Request 1: Alt + A + Q (Admin)
-            if (e.altKey && pressedKeys.has('KeyA') && pressedKeys.has('KeyQ')) {
+            if (e.altKey && pressedKeys.has('KeyA') && pressedKeys.has('KeyS')) {
                 e.preventDefault();
                 window.location.href = 'admin.html';
             }
@@ -481,7 +496,8 @@
             list.innerHTML = '';
 
             data.forEach(f => {
-                const percentage = Math.min(((f.total_raised || 0) / (f.personal_goal || 1)) * 100, 100);
+                // Request 1: Allow percentage to exceed 100%
+                const percentage = ((f.total_raised || 0) / (f.personal_goal || 1)) * 100;
 
                 const li = document.createElement('li');
                 li.className = 'fundraiser-item';
@@ -500,7 +516,7 @@
                             </div>
                         </div>
                         <div class="personal-progress-container">
-                            <div class="personal-progress-bar" style="width: ${percentage}%;">${Math.floor(percentage)}%</div>
+                            <div class="personal-progress-bar" style="width: ${Math.min(percentage, 100)}%;">${Math.floor(percentage)}%</div>
                         </div>
                         <div class="donations-sublist-container"></div>
                     </div>
@@ -540,7 +556,8 @@
             const groupArray = Object.entries(groups).map(([name, data]) => ({
                 name,
                 ...data,
-                percentage: Math.min((data.total_raised / (data.personal_goal || 1)) * 100, 100)
+                // Request 1: Allow percentage to exceed 100%
+                percentage: (data.total_raised / (data.personal_goal || 1)) * 100
             })).sort((a, b) => b.percentage - a.percentage);
 
             const container = document.getElementById('group-progress-list');
@@ -554,7 +571,7 @@
                         <span class="group-stats">₪${group.total_raised.toLocaleString()} / ₪${group.personal_goal.toLocaleString()}</span>
                     </div>
                     <div class="progress-container" style="height: 16px;">
-                        <div class="progress-bar" style="width: ${group.percentage}%; height: 16px; line-height: 16px;">${Math.floor(group.percentage)}%</div>
+                        <div class="progress-bar" style="width: ${Math.min(group.percentage, 100)}%; height: 16px; line-height: 16px;">${Math.floor(group.percentage)}%</div>
                     </div>
                 `;
                 container.appendChild(item);
@@ -697,14 +714,15 @@
 
             const fundraiser = allFundraisersForModal.find(f => f.id === fundraiserId);
             if (fundraiser) {
-                const percentage = Math.min(((fundraiser.total_raised || 0) / (fundraiser.personal_goal || 1)) * 100, 100);
+                // Request 1: Allow percentage to exceed 100%
+                const percentage = ((fundraiser.total_raised || 0) / (fundraiser.personal_goal || 1)) * 100;
                 container.innerHTML = `
                     <div style="font-size: 0.85rem; margin-bottom: 5px; display:flex; justify-content:space-between;">
                         <span>היעד של ${fundraiser.name}</span>
                         <span>₪${fundraiser.total_raised.toLocaleString()} / ₪${fundraiser.personal_goal.toLocaleString()}</span>
                     </div>
                     <div class="personal-progress-container" style="margin-top:0;">
-                        <div class="personal-progress-bar" style="width: ${percentage}%;">${Math.floor(percentage)}%</div>
+                        <div class="personal-progress-bar" style="width: ${Math.min(percentage, 100)}%;">${Math.floor(percentage)}%</div>
                     </div>
                 `;
                 container.style.display = 'block';
@@ -852,6 +870,23 @@
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 300);
             }, 5000);
+        }
+
+        // Request 4: Confetti Logic
+        function triggerConfetti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            var randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
         }
 
         // Request 6: Kudos logic for fundraisers (copied from fundraisers.html)
@@ -1063,7 +1098,6 @@
             updateProgress();
             applyTheme();
             setupRealtime(); // Request 1 (Realtime)
-            document.getElementById('goal-amount').innerText = 'יעד: ₪' + goalAmount.toLocaleString();
             setLanguage(currentLang); // Apply language on load
         };
     </script>

@@ -333,14 +333,15 @@
 
             const fundraiser = allFundraisersForModal.find(f => f.id === fundraiserId);
             if (fundraiser) {
-                const percentage = Math.min(((fundraiser.total_raised || 0) / (fundraiser.personal_goal || 1)) * 100, 100);
+                // Request 1: Allow percentage to exceed 100%
+                const percentage = ((fundraiser.total_raised || 0) / (fundraiser.personal_goal || 1)) * 100;
                 container.innerHTML = `
                     <div style="font-size: 0.85rem; margin-bottom: 5px; display:flex; justify-content:space-between;">
                         <span>היעד של ${fundraiser.name}</span>
                         <span>₪${fundraiser.total_raised.toLocaleString()} / ₪${fundraiser.personal_goal.toLocaleString()}</span>
                     </div>
                     <div class="personal-progress-container" style="margin-top:0;">
-                        <div class="personal-progress-bar" style="width: ${percentage}%;">${Math.floor(percentage)}%</div>
+                        <div class="personal-progress-bar" style="width: ${Math.min(percentage, 100)}%;">${Math.floor(percentage)}%</div>
                     </div>
                 `;
                 container.style.display = 'block';

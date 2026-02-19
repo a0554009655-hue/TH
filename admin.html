@@ -60,6 +60,7 @@
     <div class="sidebar">
         <h2><i class="fas fa-cog"></i> פאנל ניהול</h2>
         <button onclick="showTab('fundraisers', this)" class="active"><i class="fas fa-users"></i> ניהול מתרימים</button>
+        <button onclick="showTab('donations', this)"><i class="fas fa-hand-holding-heart"></i> ניהול תרומות</button>
         <button onclick="showTab('analytics', this)"><i class="fas fa-chart-line"></i> נתונים וסטטיסטיקה</button>
         <button onclick="showTab('theme', this)"><i class="fas fa-palette"></i> עיצוב האתר</button>
         <button onclick="showTab('export', this)"><i class="fas fa-file-excel"></i> ייצוא לאקסל</button>
@@ -118,6 +119,21 @@
             </div>
         </div>
 
+        <!-- Request 2: Donations Management Tab -->
+        <div id="tab-donations" class="section">
+            <div class="card">
+                <h1>ניהול תרומות</h1>
+                <p>כאן ניתן לצפות בתרומות האחרונות ולמחוק תרומות במידת הצורך.</p>
+                <div class="form-group">
+                    <input type="text" id="search-donation-input" placeholder="חפש לפי שם תורם..." oninput="filterDonationsTable()">
+                </div>
+                <ul id="admin-donations-list" class="admin-fundraiser-list">
+                    <!-- Donations will be loaded here -->
+                </ul>
+                <button class="btn" onclick="loadAdminDonations()" style="margin-top: 10px;">רענן רשימה</button>
+            </div>
+        </div>
+
         <!-- Analytics Tab -->
         <div id="tab-analytics" class="section">
             <div class="card">
@@ -132,6 +148,14 @@
         <!-- Theme Tab -->
         <div id="tab-theme" class="section">
             <div class="card">
+                <!-- Request 3: Update Campaign Goal -->
+                <h1>הגדרות קמפיין</h1>
+                <div class="form-group">
+                    <label>יעד הקמפיין (בשקלים)</label>
+                    <input type="number" id="campaign-goal-input" placeholder="150000">
+                    <button class="btn" onclick="saveCampaignGoal()" style="margin-top: 10px;">עדכן יעד</button>
+                </div>
+                <hr style="margin: 30px 0; border: 0; border-top: 1px solid var(--border-color);">
                 <h1>התאמת צבעי האתר</h1>
                 <p>שינוי הצבעים כאן ישפיע על האתר הראשי.</p>
                 <div id="color-pickers"></div>
@@ -189,7 +213,11 @@
                 loadFundraisersList(); // For the dropdown
                 renderFundraisersTable(); // For the list display
             }
-            if (tabName === 'theme') initColorPickers(); // Re-initialize pickers when tab is shown
+            if (tabName === 'donations') loadAdminDonations();
+            if (tabName === 'theme') {
+                initColorPickers();
+                loadCampaignGoal();
+            }
         }
         
         // Fundraisers Logic
@@ -303,6 +331,88 @@
             document.getElementById('donation-amount').value = '';
             document.getElementById('donor-name').value = '';
             renderFundraisersTable(); // Refresh the displayed list to show updated total
+        }
+
+        // Request 2: Donations Management Logic
+        let allAdminDonations = [];
+        async function loadAdminDonations() {
+            const list = document.getElementById('admin-donations-list');
+            list.innerHTML = '<p>טוען...</p>';
+            
+            const { data, error } = await supabaseClient
+                .from('donations')
+                .select('*, fundraisers(name)')
+                .order('created_at', { ascending: false })
+                .limit(100); // Limit to last 100 for performance
+
+            if (error) {
+                list.innerHTML = '<p style="color: red;">שגיאה בטעינת תרומות</p>';
+                return;
+            }
+            allAdminDonations = data;
+            renderDonationsTable(allAdminDonations);
+        }
+
+        function renderDonationsTable(donations) {
+            const list = document.getElementById('admin-donations-list');
+            list.innerHTML = '';
+            if (donations.length === 0) {
+                list.innerHTML = '<p>לא נמצאו תרומות.</p>';
+                return;
+            }
+            donations.forEach(d => {
+                const li = document.createElement('li');
+                li.className = 'admin-fundraiser-item';
+                const donorName = d.donor_name || 'אנונימי';
+                const fundraiserName = d.fundraisers ? d.fundraisers.name : 'כללי';
+                li.innerHTML = `
+                    <div>
+                        <div class="name">${donorName} <span style="font-weight:normal; font-size:0.9rem;">(ע"י ${fundraiserName})</span></div>
+                        <div class="amount">₪${d.amount.toLocaleString()}</div>
+                        <div style="font-size: 0.8rem; color: #64748b;">${new Date(d.created_at).toLocaleString('he-IL')}</div>
+                    </div>
+                    <div class="actions">
+                        <button onclick="deleteDonation(${d.id})">מחק</button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function filterDonationsTable() {
+            const term = document.getElementById('search-donation-input').value.toLowerCase();
+            const filtered = allAdminDonations.filter(d => (d.donor_name && d.donor_name.toLowerCase().includes(term)) || (d.fundraisers && d.fundraisers.name.toLowerCase().includes(term)));
+            renderDonationsTable(filtered);
+        }
+
+        async function deleteDonation(id) {
+            if (!confirm('האם אתה בטוח שברצונך למחוק תרומה זו? הפעולה בלתי הפיכה.')) return;
+            
+            const { error } = await supabaseClient.from('donations').delete().eq('id', id);
+            if (error) return alert('שגיאה במחיקה: ' + error.message);
+            
+            alert('התרומה נמחקה בהצלחה.');
+            loadAdminDonations();
+        }
+
+        // Request 3: Campaign Goal Logic
+        async function loadCampaignGoal() {
+            const { data, error } = await supabaseClient.from('site_config').select('value').eq('key', 'campaign_goal').single();
+            if (data) {
+                document.getElementById('campaign-goal-input').value = data.value;
+            } else {
+                document.getElementById('campaign-goal-input').value = '150000'; // Default
+            }
+        }
+
+        async function saveCampaignGoal() {
+            const newGoal = document.getElementById('campaign-goal-input').value;
+            if (!newGoal || newGoal <= 0) return alert('נא להזין יעד תקין');
+
+            const { error } = await supabaseClient.from('site_config').upsert({ key: 'campaign_goal', value: newGoal }, { onConflict: 'key' });
+            if (error) return alert('שגיאה בשמירה: ' + error.message);
+            
+            alert('היעד עודכן בהצלחה!');
         }
 
         async function resetCampaignData() {
