@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אודות | קמפיין פורים</title>
+    <link rel="icon" href="https://i.ibb.co/mF8Nzxw/image.png">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Secular+One&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Reusing styles from index.html for consistency */
+        :root {
+            --primary: #0f172a;
+            --accent: #ca8a04;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --success: #16a34a;
+            --border-color: #e2e8f0;
+        }
+        body { font-family: 'Heebo', sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text-main); padding-bottom: 90px; }
+        header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 1rem 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+        header h2 { margin: 0; font-family: 'Secular One', sans-serif; font-size: 1.2rem; text-align: center; flex-grow: 1; }
+        .container { max-width: 900px; margin: 20px auto; padding: 0 15px; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border-top: 4px solid var(--accent); position: relative; }
+        h1 { color: var(--primary); margin-top: 0; font-family: 'Secular One', sans-serif; font-size: 1.8rem; }
+        
+        /* Content styling */
+        #about-content { line-height: 1.8; font-size: 1.1rem; }
+        #about-content h2, #about-content h3 { font-family: 'Secular One', sans-serif; color: var(--primary); }
+        #about-content p { margin-bottom: 1rem; }
+        #about-content b, #about-content strong { color: var(--primary); }
+
+        /* Bottom Navigation */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: var(--card-bg); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05); z-index: 900; left: 0; }
+        .nav-item { text-align: center; color: #94a3b8; cursor: pointer; flex: 1; font-size: 0.8rem; text-decoration: none; }
+        .nav-item.active { color: var(--accent); font-weight: bold; }
+        .nav-item i { font-size: 1.3rem; display: block; margin-bottom: 4px; }
+
+        /* Header buttons */
+        .header-buttons { display: flex; align-items: center; gap: 15px; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
+        .header-donate-btn {
+            background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px;
+            font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 1rem;
+            text-decoration: none;
+        }
+        .header-donate-btn:hover { background: #eab308; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-buttons">
+            <a href="about.html" id="about-btn" style="display: flex; align-items: center; text-decoration: none;">
+                <img src="https://i.ibb.co/mF8Nzxw/image.png" alt="אודות" style="height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid white;">
+            </a>
+            <!-- The donate button here links to the main page as the modal is not defined here -->
+            <a href="index.html" class="header-donate-btn">תרום עכשיו</a>
+            <button id="lang-toggle-btn" style="background: transparent; border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; margin-right: 10px;" onclick="toggleLanguage()">EN</button>
+        </div>
+        <h2>ישיבת תפארת התורה קמפיין פורים תשפ"ו</h2>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h1><i class="fas fa-info-circle"></i> אודות הקמפיין</h1>
+            <div id="about-content">
+                <p>טוען תוכן...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item"><i class="fas fa-home"></i><span>דף הבית</span></a>
+        <a href="fundraisers.html" class="nav-item"><i class="fas fa-users"></i><span>מתרימים</span></a>
+        <a href="donors.html" class="nav-item"><i class="fas fa-list"></i><span>תורמים</span></a>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qkiutqhdmmpmrireouhr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFraXV0cWhkbW1wbXJpcmVvdWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MDA4ODYsImV4cCI6MjA4NTE3Njg4Nn0.qiPyC9kz0I7g66pk7_-akWmuFAdMDWKmRX0dPviirqE';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function applyTheme() {
+            const { data } = await supabaseClient.from('site_config').select('*');
+            if (data) {
+                data.forEach(row => {
+                    if (row.key.startsWith('--')) {
+                        document.documentElement.style.setProperty(row.key, row.value);
+                    }
+                });
+            }
+        }
+
+        async function loadAboutContent() {
+            const contentDiv = document.getElementById('about-content');
+            const { data, error } = await supabaseClient
+                .from('site_config')
+                .select('value')
+                .eq('key', 'about_content_html')
+                .single();
+
+            if (error || !data || !data.value) {
+                contentDiv.innerHTML = '<p>עדיין לא הוזן תוכן לדף זה. ניתן לערוך אותו מפאנל הניהול.</p>';
+                console.error('Error or no content found for about page:', error);
+                return;
+            }
+
+            contentDiv.innerHTML = data.value;
+        }
+
+        // A simplified language toggle as the full dictionary isn't needed here.
+        function toggleLanguage() {
+            alert('בקרת שפה זמינה בדפים הראשיים.');
+        }
+
+        window.onload = function() {
+            applyTheme();
+            loadAboutContent();
+        };
+    </script>
+</body>
+</html>

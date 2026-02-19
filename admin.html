@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>קמפיין פורים | ישיבת תפארת התורה</title>
+    <link rel="icon" href="https://i.ibb.co/mF8Nzxw/image.png">
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&family=Secular+One&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -54,6 +55,38 @@
         .admin-fundraiser-item .amount { font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
         .admin-fundraiser-item .actions button { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
         .admin-fundraiser-item .actions button:hover { background: #dc2626; }
+
+        /* New styles for the editor */
+        .editor-toolbar {
+            background: #f1f5f9;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .editor-toolbar button, .editor-toolbar select {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .editor-toolbar button:hover, .editor-toolbar select:hover {
+            background: #e2e8f0;
+        }
+        .editor-content {
+            width: 100%; min-height: 250px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: #f8fafc; direction: rtl; text-align: right;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+        .editor-content:focus {
+            outline: none; border-color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -62,6 +95,7 @@
         <button onclick="showTab('fundraisers', this)" class="active"><i class="fas fa-users"></i> ניהול מתרימים</button>
         <button onclick="showTab('donations', this)"><i class="fas fa-hand-holding-heart"></i> ניהול תרומות</button>
         <button onclick="showTab('analytics', this)"><i class="fas fa-chart-line"></i> נתונים וסטטיסטיקה</button>
+        <button onclick="showTab('content', this)"><i class="fas fa-pencil-alt"></i> ניהול תוכן</button>
         <button onclick="showTab('theme', this)"><i class="fas fa-palette"></i> עיצוב האתר</button>
         <button onclick="showTab('export', this)"><i class="fas fa-file-excel"></i> ייצוא לאקסל</button>
         <button onclick="showTab('danger', this)"><i class="fas fa-exclamation-triangle"></i> אזור סכנה</button>
@@ -166,6 +200,34 @@
             </div>
         </div>
 
+        <!-- Content Management Tab -->
+        <div id="tab-content" class="section">
+            <div class="card">
+                <h1><i class="fas fa-file-alt"></i> עריכת דף "אודות"</h1>
+                <p>כאן ניתן לערוך את התוכן שיוצג בדף האודות באמצעות עורך התוכן.</p>
+                <div class="form-group">
+                    <label for="about-content-editor">תוכן הדף</label>
+                    <div class="editor-toolbar">
+                        <button type="button" title="הדגשה" onclick="formatDoc('bold')"><i class="fas fa-bold"></i></button>
+                        <button type="button" title="הטייה" onclick="formatDoc('italic')"><i class="fas fa-italic"></i></button>
+                        <button type="button" title="קו תחתון" onclick="formatDoc('underline')"><i class="fas fa-underline"></i></button>
+                        <button type="button" title="יישור לשמאל" onclick="formatDoc('justifyLeft')"><i class="fas fa-align-left"></i></button>
+                        <button type="button" title="מרכוז" onclick="formatDoc('justifyCenter')"><i class="fas fa-align-center"></i></button>
+                        <button type="button" title="יישור לימין" onclick="formatDoc('justifyRight')"><i class="fas fa-align-right"></i></button>
+                        <button type="button" title="רשימה" onclick="formatDoc('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
+                        <select onchange="formatDoc('formatBlock', this.value)" title="סוג טקסט">
+                            <option value="p" selected>טקסט רגיל</option>
+                            <option value="h2">כותרת גדולה</option>
+                            <option value="h3">כותרת בינונית</option>
+                            <option value="h4">כותרת קטנה</option>
+                        </select>
+                    </div>
+                    <div id="about-content-editor" class="editor-content" contenteditable="true"></div>
+                </div>
+                <button class="btn" onclick="saveAboutContent()">שמור תוכן</button>
+            </div>
+        </div>
+
         <!-- Export Tab -->
         <div id="tab-export" class="section">
             <div class="card">
@@ -213,6 +275,7 @@
                 loadFundraisersList(); // For the dropdown
                 renderFundraisersTable(); // For the list display
             }
+            if (tabName === 'content') loadAboutContent();
             if (tabName === 'donations') loadAdminDonations();
             if (tabName === 'theme') {
                 initColorPickers();
@@ -413,6 +476,33 @@
             if (error) return alert('שגיאה בשמירה: ' + error.message);
             
             alert('היעד עודכן בהצלחה!');
+        }
+
+        // About Page Content Logic
+        async function loadAboutContent() {
+            const editor = document.getElementById('about-content-editor');
+            editor.innerHTML = 'טוען...';
+            const { data, error } = await supabaseClient.from('site_config').select('value').eq('key', 'about_content_html').single();
+            if (data && data.value) {
+                editor.innerHTML = data.value;
+            } else {
+                editor.innerHTML = ''; // Clear if not found
+            }
+        }
+
+        async function saveAboutContent() {
+            const content = document.getElementById('about-content-editor').innerHTML;
+            const { error } = await supabaseClient.from('site_config').upsert({ key: 'about_content_html', value: content }, { onConflict: 'key' });
+            if (error) return alert('שגיאה בשמירת התוכן: ' + error.message);
+            
+            alert('תוכן עמוד האודות עודכן בהצלחה!');
+        }
+
+        function formatDoc(command, value = null) {
+            // For select, if the placeholder is re-selected
+            if (value === "") return;
+            document.execCommand(command, false, value);
+            document.getElementById('about-content-editor').focus();
         }
 
         async function resetCampaignData() {
