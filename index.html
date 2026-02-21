@@ -486,6 +486,12 @@
                 e.preventDefault();
                 window.location.href = 'thankyou.html';
             }
+
+            // Request: Alt + A + Z (Live Presentation Mode)
+            if (e.altKey && pressedKeys.has('KeyA') && pressedKeys.has('KeyZ')) {
+                e.preventDefault();
+                window.location.href = 'live.html';
+            }
         });
 
         document.addEventListener('keyup', (e) => {

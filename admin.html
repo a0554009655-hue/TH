@@ -53,8 +53,22 @@
         .admin-fundraiser-item .name { font-weight: bold; font-size: 1.1rem; }
         .admin-fundraiser-item .group { font-size: 0.9rem; color: #64748b; }
         .admin-fundraiser-item .amount { font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
-        .admin-fundraiser-item .actions button { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
-        .admin-fundraiser-item .actions button:hover { background: #dc2626; }
+        .admin-fundraiser-item .actions {
+            display: flex;
+            gap: 8px;
+        }
+        .admin-fundraiser-item .actions button {
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .admin-fundraiser-item .actions .delete-btn { background: #ef4444; }
+        .admin-fundraiser-item .actions .delete-btn:hover { background: #dc2626; }
+        .admin-fundraiser-item .actions .edit-btn { background: #3b82f6; }
+        .admin-fundraiser-item .actions .edit-btn:hover { background: #2563eb; }
 
         /* New styles for the editor */
         .editor-toolbar {
@@ -189,6 +203,12 @@
                     <input type="number" id="campaign-goal-input" placeholder="150000">
                     <button class="btn" onclick="saveCampaignGoal()" style="margin-top: 10px;">עדכן יעד</button>
                 </div>
+                <!-- Request: Add Campaign End Date -->
+                <div class="form-group">
+                    <label>תאריך סיום הקמפיין</label>
+                    <input type="datetime-local" id="campaign-end-date-input">
+                    <button class="btn" onclick="saveCampaignEndDate()" style="margin-top: 10px;">עדכן תאריך סיום</button>
+                </div>
                 <hr style="margin: 30px 0; border: 0; border-top: 1px solid var(--border-color);">
                 <h1>התאמת צבעי האתר</h1>
                 <p>שינוי הצבעים כאן ישפיע על האתר הראשי.</p>
@@ -280,6 +300,7 @@
             if (tabName === 'theme') {
                 initColorPickers();
                 loadCampaignGoal();
+                loadCampaignEndDate(); // Request: Load end date
             }
         }
         
@@ -341,7 +362,8 @@
                         <div class="amount">גויס: ₪${(f.total_raised || 0).toLocaleString()} / יעד: ₪${(f.personal_goal || 0).toLocaleString()}</div>
                     </div>
                     <div class="actions">
-                        <button onclick="deleteFundraiser(${f.id})">מחק</button>
+                        <button class="edit-btn" onclick="editFundraiserGoal(${f.id}, ${f.personal_goal || 0})">ערוך יעד</button>
+                        <button class="delete-btn" onclick="deleteFundraiser(${f.id})">מחק</button>
                     </div>
                 `;
                 listContainer.appendChild(li);
@@ -370,6 +392,30 @@
             alert('המתרים ותרומותיו נמחקו בהצלחה!');
             loadFundraisersList();
             renderFundraisersTable();
+        }
+
+        async function editFundraiserGoal(fundraiserId, currentGoal) {
+            const newGoal = prompt('הזן את היעד האישי החדש:', currentGoal);
+            if (newGoal === null || newGoal.trim() === '') {
+                return; // User cancelled or entered empty string
+            }
+
+            const personal_goal = parseFloat(newGoal);
+            if (isNaN(personal_goal) || personal_goal < 0) {
+                return alert('נא להזין מספר חיובי תקין.');
+            }
+
+            const { error } = await supabaseClient
+                .from('fundraisers')
+                .update({ personal_goal: personal_goal })
+                .eq('id', fundraiserId);
+
+            if (error) {
+                return alert('שגיאה בעדכון היעד: ' + error.message);
+            }
+
+            alert('היעד עודכן בהצלחה!');
+            renderFundraisersTable(); // Refresh the list
         }
 
         async function addDonation() {
@@ -476,6 +522,26 @@
             if (error) return alert('שגיאה בשמירה: ' + error.message);
             
             alert('היעד עודכן בהצלחה!');
+        }
+
+        // Request: Campaign End Date Logic
+        async function loadCampaignEndDate() {
+            const { data, error } = await supabaseClient.from('site_config').select('value').eq('key', 'campaign_end_date').single();
+            if (data && data.value) {
+                // The value from DB is in ISO 8601 format (e.g., "2024-03-10T18:00:00"), which is compatible with datetime-local input
+                document.getElementById('campaign-end-date-input').value = data.value;
+            }
+        }
+
+        async function saveCampaignEndDate() {
+            const newEndDate = document.getElementById('campaign-end-date-input').value;
+            if (!newEndDate) return alert('נא לבחור תאריך ושעה לסיום.');
+
+            // The value from datetime-local is already in a compatible format for saving.
+            const { error } = await supabaseClient.from('site_config').upsert({ key: 'campaign_end_date', value: newEndDate }, { onConflict: 'key' });
+            if (error) return alert('שגיאת בשמירת תאריך הסיום: ' + error.message);
+            
+            alert('תאריך הסיום עודכן בהצלחה!');
         }
 
         // About Page Content Logic

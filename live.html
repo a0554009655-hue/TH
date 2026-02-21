@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html class="dark" dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Campaign | ישיבת תפארת התורה</title>
+    <link rel="icon" href="https://i.ibb.co/mF8Nzxw8/image.png">
+    
+    <!-- New styles from example -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Heebo:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    
+    <!-- Scripts from original live.html -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f4c025",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#0a0a05",
+                        "neon-green": "#39FF14",
+                    },
+                    fontFamily: { "display": ["Inter", "Heebo", "sans-serif"] },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Heebo', 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glass-header { background: rgba(10, 10, 5, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(244, 192, 37, 0.2); }
+        .bg-gradient-premium { background: radial-gradient(circle at 50% 0%, #1a1810 0%, #0a0a05 100%); }
+        .gold-glow { text-shadow: 0 0 15px rgba(244, 192, 37, 0.5); }
+        .neon-glow { box-shadow: 0 0 10px rgba(57, 255, 20, 0.3); text-shadow: 0 0 8px rgba(57, 255, 20, 0.6); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Copied from original live.html for donation popup */
+        .donation-popup {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            padding: 50px; border-radius: 40px; text-align: center; z-index: 2000;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            min-width: 500px;
+            /* Applying new theme */
+            background: rgba(10, 10, 5, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 4px solid #f4c025; /* primary color */
+            box-shadow: 0 0 100px rgba(244, 192, 37, 0.6); /* primary color glow */
+        }
+        .donation-popup.show { transform: translate(-50%, -50%) scale(1); }
+        .donation-popup h3 { font-size: 2.5rem; color: #fff; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 2px; }
+        .donation-popup .donor { font-size: 3.5rem; font-weight: bold; color: #f4c025; /* primary color */ margin: 15px 0; font-family: 'Heebo', sans-serif; }
+        .donation-popup .amount { font-size: 5rem; color: #39FF14; /* neon-green */ font-weight: bold; margin: 10px 0; text-shadow: 0 0 30px rgba(57, 255, 20, 0.6); }
+        .donation-popup .message { font-size: 1.5rem; color: #cbd5e1; font-style: italic; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen overflow-x-hidden bg-gradient-premium">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass-header px-6 py-4 lg:px-20">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <img src="https://i.ibb.co/mF8Nzxw8/image.png" alt="Logo" class="h-10 w-10 rounded-full border-2 border-primary/50">
+                </div>
+                <div>
+                    <h1 class="text-xl lg:text-2xl font-extrabold tracking-tight text-slate-100">
+                        קמפיין פורים <span class="text-primary opacity-90">— שידור חי</span>
+                    </h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="hidden md:flex items-center gap-2 px-4 py-2 rounded-full glass border-primary/20">
+                    <span class="size-2 rounded-full bg-red-500 animate-pulse"></span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Live</span>
+                </div>
+                <div id="header-total-raised" class="px-6 py-2 rounded-xl bg-black/40 border border-neon-green/30 flex items-center gap-3 neon-glow">
+                    <span class="text-2xl font-mono font-bold text-neon-green">₪0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-10 lg:px-20">
+        <!-- Hero Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="glass p-6 rounded-2xl flex flex-col items-center justify-center gap-2">
+                <span class="text-slate-400 text-sm font-medium">יעד הקמפיין</span>
+                <span id="campaign-goal" class="text-3xl font-bold text-slate-100">₪0</span>
+                <div class="w-full h-1.5 bg-white/5 rounded-full mt-2 overflow-hidden">
+                    <div id="main-progress-bar" class="h-full bg-primary/40" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="glass p-6 rounded-2xl flex flex-col items-center justify-center gap-2">
+                <span class="text-slate-400 text-sm font-medium">מספר תורמים</span>
+                <span id="donors-count" class="text-3xl font-bold text-slate-100">0</span>
+                <span class="text-xs text-primary">תזכו למצוות!</span>
+            </div>
+            <div class="glass p-6 rounded-2xl flex flex-col items-center justify-center gap-2">
+                <span class="text-slate-400 text-sm font-medium">זמן לסיום</span>
+                <span id="countdown-timer" class="text-3xl font-bold text-slate-100 font-mono">טוען...</span>
+                <span class="text-xs text-slate-500 italic">ספירה לאחור</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Left Card: Leaders -->
+            <section class="glass rounded-3xl overflow-hidden flex flex-col min-h-[500px]">
+                <div class="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1">emoji_events</span>
+                        <h2 class="text-xl font-bold text-slate-100">המתרימים המובילים</h2>
+                    </div>
+                </div>
+                <div class="flex-1 p-2 overflow-y-auto no-scrollbar">
+                    <table class="w-full text-right border-separate border-spacing-y-3">
+                        <thead>
+                            <tr class="text-slate-500 text-xs font-bold">
+                                <th class="pr-6 pb-2">דירוג</th>
+                                <th class="pb-2">שם המתרים</th>
+                                <th class="pl-6 pb-2 text-left">סכום</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaders-tbody">
+                            <!-- Leader items will be injected here by JS -->
+                        </tbody>
+                    </table>
+                    <div class="mt-4 p-6 text-center text-slate-500 text-sm italic">
+                        הטבלה מתעדכנת בזמן אמת...
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Card: Group Status -->
+            <section class="glass rounded-3xl overflow-hidden flex flex-col min-h-[500px]">
+                <div class="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-neon-green" style="font-variation-settings: 'FILL' 1">auto_stories</span>
+                        <h2 class="text-xl font-bold text-slate-100">מצב השיעורים</h2>
+                    </div>
+                </div>
+                <div class="flex-1 p-8">
+                    <div id="groups-list" class="space-y-4">
+                        <!-- Group progress will be injected here by JS -->
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <div class="mt-12 text-center">
+            <p class="mt-6 text-slate-500 font-medium text-sm">
+                כל הזכויות שמורות לישיבת תפארת התורה © 2024
+            </p>
+        </div>
+    </main>
+
+    <!-- Donation Popup (from original live.html) -->
+    <div id="donation-popup" class="donation-popup">
+        <h3>תרומה חדשה!</h3>
+        <div class="donor" id="popup-donor">ישראל ישראלי</div>
+        <div class="amount" id="popup-amount">₪180</div>
+        <div class="message" id="popup-message"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qkiutqhdmmpmrireouhr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFraXV0cWhkbW1wbXJpcmVvdWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MDA4ODYsImV4cCI6MjA4NTE3Njg4Nn0.qiPyC9kz0I7g66pk7_-akWmuFAdMDWKmRX0dPviirqE';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let campaignGoal = 150000;
+        let campaignEndDate = null;
+        let countdownInterval = null;
+
+        async function init() {
+            await loadCampaignConfig();
+            await updateDashboard();
+            setupRealtime();
+            startCountdown();
+        }
+
+        async function loadCampaignConfig() {
+            const { data, error } = await supabase.from('site_config').select('key, value');
+            if (error) {
+                console.error("Error loading site config:", error);
+                // גם אם יש שגיאה, נעדכן את התצוגה עם ברירת המחדל
+                document.getElementById('campaign-goal').innerText = `₪${campaignGoal.toLocaleString()}`;
+                return;
+            }
+            
+            if (data) {
+                const config = data.reduce((acc, item) => {
+                    acc[item.key] = item.value;
+                    return acc;
+                }, {});
+
+                if (config.campaign_goal) campaignGoal = parseInt(config.campaign_goal);
+                if (config.campaign_end_date) campaignEndDate = config.campaign_end_date;
+            }
+
+            const goalEl = document.getElementById('campaign-goal');
+            if (goalEl) goalEl.innerText = `₪${campaignGoal.toLocaleString()}`;
+        }
+
+        function startCountdown() {
+            const countdownElement = document.getElementById('countdown-timer');
+            if (!countdownElement) return;
+            
+            if (!campaignEndDate) {
+                countdownElement.innerText = "לא הוגדר";
+                return;
+            }
+            
+            const endDate = new Date(campaignEndDate).getTime();
+            if (isNaN(endDate)) {
+                countdownElement.innerText = "תאריך לא תקין";
+                return;
+            }
+
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            countdownInterval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = endDate - now;
+
+                if (distance < 0) {
+                    clearInterval(countdownInterval);
+                    countdownElement.innerText = "הקמפיין הסתיים";
+                    return;
+                }
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                let timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                if (days > 0) {
+                    timeString = `${days} ימים, ${timeString}`;
+                }
+                countdownElement.innerText = timeString;
+            }, 1000);
+        }
+
+        async function updateDashboard() {
+            // 1. טעינת מתרימים (קריטי לחישוב גיבוי ולרשימות)
+            const { data: fundraisers, error: fError } = await supabase.from('fundraisers').select('*');
+            if (fError) console.error("Error loading fundraisers:", fError);
+
+            // 2. חישוב סכום כולל (עם גיבוי למקרה שה-RPC נכשל)
+            let total = 0;
+            const { data: totalData, error: rpcError } = await supabase.rpc('get_total_raised');
+            
+            if (!rpcError && totalData !== null) {
+                total = totalData;
+            } else if (fundraisers) {
+                // Fallback: חישוב ידני אם ה-RPC חסר
+                total = fundraisers.reduce((sum, f) => sum + (f.total_raised || 0), 0);
+            }
+
+            // 3. ספירת תורמים
+            const { count: donorsCount, error: dError } = await supabase.from('donations').select('id', { count: 'exact', head: true });
+
+            // 4. עדכון ה-DOM
+            const percentage = campaignGoal > 0 ? Math.min((total / campaignGoal) * 100, 100) : 0;
+            
+            // Update header total
+            const totalEl = document.querySelector('#header-total-raised span');
+            if (totalEl) totalEl.innerText = `₪${total.toLocaleString()}`;
+            
+            // Update main progress bar
+            const progressEl = document.getElementById('main-progress-bar');
+            if (progressEl) progressEl.style.width = `${percentage}%`;
+            
+            // Update donors count
+            const donorsEl = document.getElementById('donors-count');
+            if (donorsEl) donorsEl.innerText = (donorsCount || 0).toLocaleString();
+
+            // 5. עדכון רשימות
+            if (fundraisers) {
+                processGroupsProgress(fundraisers);
+                processTopLeaders(fundraisers);
+            }
+        }
+
+        function processGroupsProgress(fundraisers) {
+            const groups = {};
+            fundraisers.forEach(f => {
+                const g = f.group || 'אחר';
+                if (!groups[g]) groups[g] = { raised: 0, goal: 0 };
+                groups[g].raised += f.total_raised || 0;
+                groups[g].goal += f.personal_goal || 0;
+            });
+
+            const sortedGroups = Object.entries(groups).map(([name, data]) => ({
+                name,
+                ...data,
+                percentage: data.goal > 0 ? (data.raised / data.goal) * 100 : 0
+            })).sort((a, b) => b.raised - a.raised);
+
+            const list = document.getElementById('groups-list');
+            let html = '';
+            sortedGroups.forEach(group => {
+                const percentage = Math.min(group.percentage, 100);
+                html += `
+                    <div class="flex flex-col gap-2 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/30 transition-all cursor-pointer">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-100 font-bold">${group.name}</span>
+                            <span class="text-xs text-slate-400">₪${group.raised.toLocaleString()} / ₪${group.goal.toLocaleString()}</span>
+                        </div>
+                        <div class="w-full h-1 bg-white/10 rounded-full">
+                            <div class="h-full bg-neon-green" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        function processTopLeaders(fundraisers) {
+            const sorted = [...fundraisers].sort((a, b) => (b.total_raised || 0) - (a.total_raised || 0)).slice(0, 10);
+            const tbody = document.getElementById('leaders-tbody');
+            let html = '';
+            sorted.forEach((f, index) => {
+                const rankClass = index === 0 ? 'bg-primary/20 border-primary/30 text-primary' : 'bg-slate-800 border-white/10 text-slate-400';
+                const amountClass = index === 0 ? 'text-primary' : 'text-slate-100';
+                const name = (f.name && f.name.trim()) ? f.name : 'אנונימי';
+                // Safe initials calculation
+                const initials = name.split(/\s+/).map(n => n[0] || '').join('').substring(0, 2);
+
+                html += `
+                    <tr class="group cursor-pointer">
+                        <td class="pr-6 py-4 rounded-r-2xl bg-white/5 border-y border-r border-white/5 group-hover:bg-primary/5 transition-all">
+                            <div class="size-8 rounded-full flex items-center justify-center border ${rankClass}">
+                                <span class="font-bold">${index + 1}</span>
+                            </div>
+                        </td>
+                        <td class="py-4 bg-white/5 border-y border-white/5 group-hover:bg-primary/5 transition-all">
+                            <div class="flex items-center gap-3">
+                                <div class="size-10 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center text-slate-400 font-bold">
+                                    ${initials}
+                                </div>
+                                <span class="font-bold text-slate-200">${name}</span>
+                            </div>
+                        </td>
+                        <td class="pl-6 py-4 rounded-l-2xl bg-white/5 border-y border-l border-white/5 group-hover:bg-primary/5 transition-all text-left">
+                            <span class="${amountClass} font-mono font-bold text-lg">₪${(f.total_raised || 0).toLocaleString()}</span>
+                        </td>
+                    </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function setupRealtime() {
+            supabase.channel('live-dashboard')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, payload => {
+                    const isNewCompleted = payload.eventType === 'INSERT' && payload.new.payment_status === 'completed';
+                    const isUpdatedToCompleted = payload.eventType === 'UPDATE' && payload.new.payment_status === 'completed' && (payload.old ? payload.old.payment_status !== 'completed' : true);
+                    if (isNewCompleted || isUpdatedToCompleted) {
+                        showNewDonation(payload.new);
+                        updateDashboard();
+                    }
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'fundraisers' }, () => updateDashboard())
+                .subscribe();
+        }
+
+        function showNewDonation(donation) {
+            if (!donation) return;
+            const popup = document.getElementById('donation-popup');
+            if (!popup) return;
+
+            const amount = (typeof donation.amount === 'number') ? donation.amount : 0;
+            const symbol = donation.currency === 'USD' ? '$' : '₪';
+
+            document.getElementById('popup-donor').innerText = donation.donor_name || 'תורם אנונימי';
+            document.getElementById('popup-amount').innerText = symbol + amount.toLocaleString();
+            document.getElementById('popup-message').innerText = donation.dedication || '';
+            
+            triggerFireworks();
+            popup.classList.add('show');
+            setTimeout(() => popup.classList.remove('show'), 8000);
+        }
+
+        function triggerFireworks() {
+            if (typeof confetti !== 'function') return; // Safety check
+
+            const duration = 5000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 3000 };
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                const particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random() * 0.2 + 0.1, y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random() * 0.2 + 0.7, y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
