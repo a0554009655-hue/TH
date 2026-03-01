@@ -156,7 +156,7 @@
         
         <div class="mt-12 text-center">
             <p class="mt-6 text-slate-500 font-medium text-sm">
-                כל הזכויות שמורות לישיבת תפארת התורה © 2024
+                כל הזכויות שמורות לאריאל דוד © 2026
             </p>
         </div>
     </main>
@@ -255,12 +255,8 @@
 
             // 2. חישוב סכום כולל (עם גיבוי למקרה שה-RPC נכשל)
             let total = 0;
-            const { data: totalData, error: rpcError } = await supabase.rpc('get_total_raised');
-            
-            if (!rpcError && totalData !== null) {
-                total = totalData;
-            } else if (fundraisers) {
-                // Fallback: חישוב ידני אם ה-RPC חסר
+            if (fundraisers) {
+                // חישוב ידני (Client Side)
                 total = fundraisers.reduce((sum, f) => sum + (f.total_raised || 0), 0);
             }
 

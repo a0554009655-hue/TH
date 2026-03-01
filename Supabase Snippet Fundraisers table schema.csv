@@ -1,0 +1,33 @@
+table_schema,table_name,column_name,data_type,foreign_key_name,foreign_table_schema,foreign_table_name,foreign_column_name
+public,donations,id,integer,donations_pkey,public,donations,id
+public,donations,fundraiser_id,integer,donations_fundraiser_id_fkey,public,fundraisers,id
+public,donations,donor_name,text,null,null,null,null
+public,donations,amount,numeric,null,null,null,null
+public,donations,created_at,timestamp with time zone,null,null,null,null
+public,donations,kudos_count,integer,null,null,null,null
+public,donations,receipt_name,text,null,null,null,null
+public,donations,dedication,text,null,null,null,null
+public,donations,email,text,null,null,null,null
+public,donations,currency,text,null,null,null,null
+public,donations,payment_status,character varying,null,null,null,null
+public,donations,amount_in_ils,numeric,null,null,null,null
+public,fundraisers,id,integer,fundraisers_pkey,public,fundraisers,id
+public,fundraisers,name,text,null,null,null,null
+public,fundraisers,group,text,null,null,null,null
+public,fundraisers,total_raised,numeric,null,null,null,null
+public,fundraisers,created_at,timestamp with time zone,null,null,null,null
+public,fundraisers,personal_goal,numeric,null,null,null,null
+public,fundraisers,kudos_count,integer,null,null,null,null
+public,groups_summary,group,text,null,null,null,null
+public,groups_summary,group_name,text,null,null,null,null
+public,groups_summary,total_raised,numeric,null,null,null,null
+public,groups_summary,total_goal,numeric,null,null,null,null
+public,groups_summary,total_kudos,bigint,null,null,null,null
+public,groups_summary,fundraisers_count,bigint,null,null,null,null
+public,site_config,key,text,site_config_pkey,public,site_config,key
+public,site_config,value,text,null,null,null,null
+public,site_visits,id,integer,site_visits_pkey,public,site_visits,id
+public,site_visits,visited_at,timestamp with time zone,null,null,null,null
+public,your_table_name,id,integer,your_table_name_pkey,public,your_table_name,id
+public,your_table_name,group,text,null,null,null,null
+public,your_table_name,created_at,timestamp with time zone,null,null,null,null

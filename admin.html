@@ -436,6 +436,15 @@
             }]);
             if (error) return alert('שגיאה ברישום התרומה: ' + error.message);
 
+            // Manual update of fundraiser total (since no DB triggers)
+            if (fundraiser_id) {
+                const { data: fData } = await supabaseClient.from('fundraisers').select('total_raised').eq('id', fundraiser_id).single();
+                if (fData) {
+                    const newTotal = (fData.total_raised || 0) + amount;
+                    await supabaseClient.from('fundraisers').update({ total_raised: newTotal }).eq('id', fundraiser_id);
+                }
+            }
+
             alert('התרומה נרשמה בהצלחה!');
             document.getElementById('donation-amount').value = '';
             document.getElementById('donor-name').value = '';

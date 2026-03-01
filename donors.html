@@ -543,7 +543,8 @@ function setupRealtime() {
                 if (isNewCompleted || isUpdatedToCompleted) {
                     // אם זו התרומה הנוכחית של המשתמש - העבר אותו לדף תודה
                     if (typeof currentDonationId !== 'undefined' && currentDonationId && payload.new.id === currentDonationId) {
-                        window.location.href = 'thankyou.html?donation_id=' + payload.new.id;
+                        // בוטל המעבר האוטומטי כדי להשאיר את חלונית נדרים פלוס פתוחה עם אישור התשלום
+                        // window.location.href = 'thankyou.html?donation_id=' + payload.new.id;
                         return;
                     }
                     // רענון הרשימה לכל שאר המשתמשים שצופים בדף

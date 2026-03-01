@@ -110,10 +110,22 @@
 
             if (donationId) {
                 try {
-                    await supabaseClient
+                    // 1. Update donation status
+                    const { data: donationData, error } = await supabaseClient
                         .from('donations')
                         .update({ payment_status: 'completed' })
-                        .eq('id', donationId);
+                        .eq('id', donationId)
+                        .select()
+                        .single();
+
+                    // 2. Update fundraiser total manually (since no DB triggers)
+                    if (donationData && donationData.fundraiser_id) {
+                        const { data: fData } = await supabaseClient.from('fundraisers').select('total_raised').eq('id', donationData.fundraiser_id).single();
+                        if (fData) {
+                            const newTotal = (fData.total_raised || 0) + donationData.amount;
+                            await supabaseClient.from('fundraisers').update({ total_raised: newTotal }).eq('id', donationData.fundraiser_id);
+                        }
+                    }
                 } catch (error) {
                     console.error("Error updating donation status:", error);
                 }

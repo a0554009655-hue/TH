@@ -591,7 +591,8 @@
 
                     if (isNewCompleted || isUpdatedToCompleted) {
                         if (currentDonationId && payload.new.id === currentDonationId) {
-                            window.location.href = 'thankyou.html?donation_id=' + payload.new.id;
+                            // בוטל המעבר האוטומטי כדי להשאיר את חלונית נדרים פלוס פתוחה
+                            // window.location.href = 'thankyou.html?donation_id=' + payload.new.id;
                             return;
                         }
                         loadFundraisers(); // רענון הרשימה לכולם
